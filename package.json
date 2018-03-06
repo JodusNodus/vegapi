@@ -21,13 +21,20 @@
   },
   "dependencies": {
     "app-module-path": "2.2.0",
+    "bcrypt": "^1.0.3",
     "bluesky-logger": "0.7.0",
     "body-parser": "1.17.1",
+    "cookie-parser": "^1.4.3",
     "express": "4.15.2",
+    "express-session": "^1.15.6",
+    "instauuid": "^1.0.4",
     "lodash": "4.17.4",
     "minimist": "1.2.0",
     "moment": "2.18.1",
     "mysql": "2.13.0",
+    "mysql2-promise": "^0.1.4",
+    "passport": "^0.4.0",
+    "passport-local": "^1.0.0",
     "q": "1.4.0"
   },
   "devDependencies": {

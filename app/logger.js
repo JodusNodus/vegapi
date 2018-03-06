@@ -27,8 +27,8 @@ const info          = require("app/info")
 const configUtil    = require("app/config-util")
 
 const DEFAULT_LOGGER_CONFIG = {
-    "root": "info",
-    "va": "debug"
+  "root": "info",
+  "va": "debug"
 }
 
 // write the log messages to the console or not.
@@ -41,28 +41,28 @@ var consoleOutput = true
  * @return {Logger} the logger for namespace **temo**.
  */
 module.exports.start = function (settings) {
-    // Logger Configuration
-    loggerFactory
-        .config(configUtil.getSetting(settings, "logger.namespaces", DEFAULT_LOGGER_CONFIG))
-        .setSeparator(configUtil.getSetting(settings, "logger.separator", "."))
-    if (configUtil.getSetting(settings, "logger.appender", "console") === "file") {
+  // Logger Configuration
+  loggerFactory
+    .config(configUtil.getSetting(settings, "logger.namespaces", DEFAULT_LOGGER_CONFIG))
+    .setSeparator(configUtil.getSetting(settings, "logger.separator", "."))
+  if (configUtil.getSetting(settings, "logger.appender", "console") === "file") {
 
-        const logPath = configUtil.getSetting(settings, "logger.path", ".")
-        if (!fs.existsSync(logPath)) {
-            // create the log folder / directory.
-            fs.mkdirSync(logPath)
-        }
-        const filer = fileAppender({
-            path: logPath,
-            name: info.getAppName()
-        })
-        loggerFactory.setWriter(filer.appendMessage)
-        // the log messages are written into file
-        consoleOutput = false
+    const logPath = configUtil.getSetting(settings, "logger.path", ".")
+    if (!fs.existsSync(logPath)) {
+      // create the log folder / directory.
+      fs.mkdirSync(logPath)
     }
-    const logger = loggerFactory.getLogger("va")
-    logger.isConsole = consoleOutput
-    return logger
+    const filer = fileAppender({
+      path: logPath,
+      name: info.getAppName()
+    })
+    loggerFactory.setWriter(filer.appendMessage)
+    // the log messages are written into file
+    consoleOutput = false
+  }
+  const logger = loggerFactory.getLogger("va")
+  logger.isConsole = consoleOutput
+  return logger
 }
 
 /**
@@ -72,7 +72,7 @@ module.exports.start = function (settings) {
  * @return {Logger}
  */
 module.exports.getLogger = function (name) {
-    const logger = loggerFactory.getLogger(name)
-    logger.isConsole = consoleOutput
-    return logger
+  const logger = loggerFactory.getLogger(name)
+  logger.isConsole = consoleOutput
+  return logger
 }

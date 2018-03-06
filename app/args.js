@@ -36,7 +36,7 @@ const mHelp = mParams.help || false
  * @return {boolean}
  */
 module.exports.isVerbose = function () {
-    return mVerbose
+  return mVerbose
 }
 
 /**
@@ -45,7 +45,7 @@ module.exports.isVerbose = function () {
  * @return {boolean}
  */
 module.exports.isHelp = function () {
-    return mHelp
+  return mHelp
 }
 
 /**
@@ -54,7 +54,7 @@ module.exports.isHelp = function () {
  * @return {string|null} the filename to the configuration
  */
 module.exports.getConfigFilename = function () {
-    return mParams.config || null
+  return mParams.config || null
 }
 
 /**
@@ -63,5 +63,5 @@ module.exports.getConfigFilename = function () {
  * @return {String|null} the path or null
  */
 module.exports.getLogPath = function () {
-    return mParams.log || null
+  return mParams.log || null
 }

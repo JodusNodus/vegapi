@@ -25,5 +25,5 @@ const _ = require("lodash")
  * @return {*} The value
  */
 module.exports.getSetting = function (settings, name, defValue) {
-    return _.get(settings, name, defValue)
+  return _.get(settings, name, defValue)
 }

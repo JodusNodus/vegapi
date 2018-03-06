@@ -20,70 +20,30 @@
  *   });
  * });
  * ```
- *
- * @module va/executor
- *
- * @requires util
- * @requires lodash
- * @requires va/http-util
  */
-
-"use strict"
-
-const util       = require("util")
-
-const _          = require("lodash")
 
 const httpStatus = require("app/http-status")
 
-/**
- * Executes the service call, send the result to the client and catches the errors.
- *
- * @param {request}  req the express request
- * @param {response} res the express response
- * @param {function} cb the callback, that collect the answer
- */
-module.exports.execute = function (req, res, cb) {
-    const url = req.originalUrl
-
-    function __sender(promise, propertyName) {
-        if (!promise.then) {
-            res.status(httpStatus.SERVER_ERROR)
-                .send({
-                    status: "error",
-                    message: "Could not found a result"
-                })
-            return
-        }
-        promise.then(
-            function (result) {
-                var data = {
-                    status: "okay"
-                }
-                data[propertyName] = result
-                res.send(data)
-            },
-            function (reason) {
-                var data = {
-                    status: "error",
-                    error: reason
-                }
-                res.status(httpStatus.BAD_REQUEST)
-                    .send(data)
-            }
-        )
-    }
-    try {
-
-        cb(__sender)
-
-    } catch (e) {
-        e = e.message
-        const message = util.format("[va]: %s (%s)", e, url)
-        res.status(httpStatus.BAD_REQUEST)
-            .send({
-                status: "error",
-                message: message
-            })
-    }
+module.exports.execute = cb => (req, res) => {
+  const promise = cb(req, res)
+  if (!promise.then) {
+    res.status(httpStatus.SERVER_ERROR)
+      .send({
+        status: "error",
+        message: "Could not found a result"
+      })
+    return
+  }
+  promise
+    .then(function (result) {
+      res.send({ status: "okay", result })
+    })
+    .catch(function (error) {
+      var data = {
+        status: "error",
+        error: error.message
+      }
+      res.status(httpStatus.BAD_REQUEST)
+        .send(data)
+    })
 }

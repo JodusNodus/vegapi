@@ -23,9 +23,9 @@ const showDatabases = require("app/service/show-databases")
 // Router: /mysql
 //
 const router = express.Router({
-    caseSensitive: true,
-    mergeParams: true,
-    strict: true
+  caseSensitive: true,
+  mergeParams: true,
+  strict: true
 })
 
 //
@@ -58,13 +58,13 @@ const router = express.Router({
  *     }
  */
 router.get("/show/databases", function (req, res) {
-    executor.execute(req, res, function (sender) {
+  executor.execute(req, res, function (sender) {
     /** @type {ShowDatabasesOptions} */
-        const options = {
-            pattern: req.query.pattern
-        }
-        sender(showDatabases.execute(options), "databases")
-    })
+    const options = {
+      pattern: req.query.pattern
+    }
+    sender(showDatabases.execute(options), "databases")
+  })
 })
 
 //

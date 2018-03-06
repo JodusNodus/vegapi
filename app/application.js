@@ -1,42 +1,25 @@
-/*
- * vegapi - https://github.com/jodusnodus/vegapi.git
- *
- * Copyright (c) 2018 JodusNodus
- */
+const bodyParser = require("body-parser")
+const cookieParser = require("cookie-parser")
+const session = require("express-session")
+const express = require("express")
+const Q = require("q")
 
-/**
- * The application of express.
- *
- * @module va/application
- *
- * @requires body-parser
- * @requires express
- * @requires q
- * @requires module:va/info
- * @requires module:va/config-util
- * @requires module:va/logger
- * @requires module:va/middleware
- * @requires module:va/router/mysql
- */
+const { execute } = require("app/executor")
+const info = require("app/info")
+const configUtil = require("app/config-util")
+const logger = require("app/logger").getLogger("va")
 
-"use strict"
+const middleware = require("app/middleware")
 
-const bodyParser      = require("body-parser")
-const express         = require("express")
-const Q               = require("q")
+const passport = require("passport")
+const userAuth = require("app/service/user-auth")
 
-const info            = require("app/info")
-const configUtil      = require("app/config-util")
-const logger          = require("app/logger").getLogger("va")
-
-const middleware      = require("app/middleware")
-
-const routerMySQL     = require("app/router/mysql")
-const routerProducts     = require("app/router/products")
+const routerProducts = require("app/router/products")
+const routerCategories = require("app/router/categories")
 
 const app = express()
 
-const DEFAULT_HOST    = "localhost"
+const DEFAULT_HOST = "localhost"
 
 /**
  * starts the application.
@@ -46,84 +29,70 @@ const DEFAULT_HOST    = "localhost"
  */
 module.exports.start = function (settings) {
 
-    // add the config instance under "config".
-    app.set("settings", settings)
-    // set the application title
-    app.set("title", info.getAppTitle())
+  // add the config instance under "config".
+  app.set("settings", settings)
+  // set the application title
+  app.set("title", info.getAppTitle())
 
-    // Middlewares...
+  // Middlewares...
 
-    app.use(middleware.measureTime())
+  app.use(middleware.measureTime())
 
-    app.use(bodyParser.json())
+  app.use(bodyParser.json())
+  app.use(cookieParser())
 
-    // Routers...
+  userAuth(passport)
 
-    app.use("/mysql", routerMySQL)
-    app.use("/products", routerProducts)
+  app.use(session({
+    secret: "cookie cutter",
+    name: "cookie",
+    resave: false,
+    saveUninitialized:false
+  }))
+  app.use(passport.initialize())
+  app.use(passport.session())
 
-    // TODO Add here your routers
+  app.use("/products", routerProducts)
+  app.use("/categories", routerCategories)
 
+  app.post("/signup", passport.authenticate("local-signup"), execute((sender, req) => {
+    sender(Promise.resolve(req.user), "user")
+  }))
 
-    // Endpoints...
+  app.post("/login", passport.authenticate("local-login"), execute((sender, req) => {
+    sender(Promise.resolve(req.user), "user")
+  }))
 
-    /**
-   * @api {get} /about About
-   * @apiName GetAbout
-   * @apiGroup System
-   * @apiDescription Shows the information about the application
-   * @apiVersion 0.0.1
-   * @apiExample {curl} Example usage:
-   *     curl -i http://localhost:18080/about
-   *
-   * @apiSuccess {String} name the application name
-   * @apiSuccess {String} title the title of the application
-   * @apiSuccess {String} version the version of the application
-   * @apiSuccess {String} vendor the author / company of the application
-   * @apiSuccess {String} description a short description.
-   *
-   * @apiSuccessExample {json} Success response:
-   *     HTTP/1.1 200 OK
-   *     {
-   *       "name": "dummy-rest",
-   *       "title": "Dummy Rest Interface",
-   *       "version": "0.0.1",
-   *       "vendor": "Dummy <dummy@example.com>",
-   *       "description": "This is a dummy service",
-   *       "build": "20161004-133401"
-   *     }
-   */
-    app.get("/about", function about(req, res) {
-        res.send({
-            name: info.getAppName(),
-            title: info.getAppTitle(),
-            version: info.getAppVersion(),
-            vendor: info.getAppVendor(),
-            description: info.getAppDescription(),
-            build: info.getBuildTimestamp()
-        })
+  app.get("/logout", (req, res) => {
+    req.logout()
+  })
+
+  app.get("/about", function about(req, res) {
+    res.send({
+      name: info.getAppName(),
+      title: info.getAppTitle(),
+      version: info.getAppVersion(),
+      vendor: info.getAppVendor(),
+      description: info.getAppDescription(),
+      build: info.getBuildTimestamp()
     })
+  })
 
-    // Starting...
+  const port = configUtil.getSetting(settings, "server.port", 0)
+  const host = configUtil.getSetting(settings, "server.host", DEFAULT_HOST)
 
-    // get the port and host
-    const port = configUtil.getSetting(settings, "server.port", 0)
-    const host = configUtil.getSetting(settings, "server.host", DEFAULT_HOST)
+  const done = Q.defer()
 
-    const done = Q.defer()
+  if (port > 0) {
+    app.listen(port, host, function () {
+      logger.info("Server is listen http://", host, ":", port)
+      done.resolve(true)
+    })
+  } else {
+    process.nextTick(function () {
+      done.reject("Missing the setting property \"server.port\"!")
+    })
+  }
 
-    if (port > 0) {
-    // starts the listening of the express application...
-        app.listen(port, host, function () {
-            logger.info("Server is listen http://", host, ":", port)
-            done.resolve(true)
-        })
-    } else {
-    // missing the port for the server...
-        process.nextTick(function () {
-            done.reject("Missing the setting property \"server.port\"!")
-        })
-    }
-
-    return done.promise
+  return done.promise
 }

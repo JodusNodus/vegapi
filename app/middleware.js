@@ -22,11 +22,11 @@ const logger  = require("app/logger").getLogger("va.middleware")
  * @return {Function} middleware function.
  */
 module.exports.measureTime = function () {
-    return function measureTimeMiddleware(req, res, next) {
-        const startTime = Date.now()
-        const url = req.originalUrl
-        const method = req.method
-        next()
-        logger.info("request [" + method + "]: \"", url, "\" in ", Date.now() - startTime, " ms")
-    }
+  return function measureTimeMiddleware(req, res, next) {
+    const startTime = Date.now()
+    const url = req.originalUrl
+    const method = req.method
+    next()
+    logger.info("request [" + method + "]: \"", url, "\" in ", Date.now() - startTime, " ms")
+  }
 }
