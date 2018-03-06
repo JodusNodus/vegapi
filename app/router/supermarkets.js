@@ -10,9 +10,10 @@ const router = express.Router({
 })
 
 router.get("/", execute(async function(req) {
-	const size = 4
+	const size = 5
   const { lat, lng } = req.query
-  let supermarkets = await gmapsService.fetchNearbySupermarkets(lat, lng, size)
+  let supermarkets = await gmapsService.fetchNearbySupermarkets(lat, lng)
+	supermarkets = supermarkets.slice(0, size)
 	return { supermarkets }
 }))
 
