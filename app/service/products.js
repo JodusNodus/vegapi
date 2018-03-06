@@ -21,25 +21,19 @@ const SQL_SELECT_PRODUCT = `
 ${SQL_SELECT_ALL}
 WHERE HEX(p.ean) = ?`
 
-module.exports.fetchAll = async function ({ categoryid, offset, size, searchquery }) {
-  let stmt = SQL_SELECT_ALL
-  const params = {
-    offset: offset ? parseInt(offset) : 0,
-    size: size ? parseInt(size) : 10
-  }
+const SQL_INSERT_PRODUCT = `
+INSERT INTO products (ean, name, categoryid, brandid, creationdate)
+VALUES (?, ?, ?, ?, ?)`
 
-  if (categoryid) {
-    params.categoryid = parseInt(categoryid)
+module.exports.fetchAll = async function (params) {
+  let stmt = SQL_SELECT_ALL
+  if (params.categoryid) {
     stmt += SQL_CATEGORY_FILTER
   }
-
-  if (searchquery) {
-    params.searchquery = searchquery
+  if (params.searchquery) {
     stmt += SQL_FUZZY_SEARCH_FILTER
   }
-
   stmt += SQL_PAGINATION
-
   const [ products ] = await db.execute(stmt, params)
   return { products, params }
 }
@@ -47,4 +41,8 @@ module.exports.fetchAll = async function ({ categoryid, offset, size, searchquer
 module.exports.fetchProduct = async function (ean) {
   const [ rows ] = await db.execute(SQL_SELECT_PRODUCT, [ ean ])
   return { product: rows[0] }
+}
+
+module.exports.insertProduct = async function ({ ean, name, categoryid, brandid, creationdate }) {
+  await db.execute(SQL_INSERT_PRODUCT, [ ean, name, categoryid, brandid, creationdate ])
 }
