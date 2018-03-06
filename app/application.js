@@ -14,8 +14,7 @@ const middleware = require("app/middleware")
 const passport = require("passport")
 const userAuth = require("app/service/user-auth")
 
-const routerProducts = require("app/router/products")
-const routerCategories = require("app/router/categories")
+const routerAPI = require("app/router/api")
 
 const app = express()
 
@@ -52,20 +51,20 @@ module.exports.start = function (settings) {
   app.use(passport.initialize())
   app.use(passport.session())
 
-  app.use("/products", routerProducts)
-  app.use("/categories", routerCategories)
+  app.use("/api", routerAPI)
 
-  app.post("/signup", passport.authenticate("local-signup"), execute((sender, req) => {
-    sender(Promise.resolve(req.user), "user")
+  app.post("/signup", passport.authenticate("local-signup"), execute(async function(req) {
+    return { user: req.user }
   }))
 
-  app.post("/login", passport.authenticate("local-login"), execute((sender, req) => {
-    sender(Promise.resolve(req.user), "user")
+  app.post("/login", passport.authenticate("local-login"), execute(async function(req) {
+    return { user: req.user }
   }))
 
-  app.get("/logout", (req, res) => {
+  app.get("/logout", execute(async function(req) {
     req.logout()
-  })
+    return {}
+  }))
 
   app.get("/about", function about(req, res) {
     res.send({

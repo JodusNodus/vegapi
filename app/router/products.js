@@ -4,7 +4,6 @@ const { execute } = require("app/executor")
 const productsService = require("app/service/products")
 
 const router = express.Router({
-  caseSensitive: true,
   mergeParams: true,
   strict: true
 })

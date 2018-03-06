@@ -24,7 +24,9 @@ function serializeUser(user, done) {
 
 function deserializeUser(userid, done) {
   usersService.fetchUser(userid)
-    .then(user => done(null, user))
+    .then(user => {
+      done(null, user)
+    })
     .catch(err => done(err))
 }
 
@@ -36,10 +38,11 @@ async function signup(req, email, password, done) {
       return done(null, false)
     }
     const userid = instauuid("buffer")
-    user = { userid: userid.toString("hex"), email, firstname, lastname }
     const passHash = await bcrypt.hash(password)
 
-    await usersService.insertUser(user, passHash)
+    await usersService.insertUser({ userid, passHash, email, firstname, lastname })
+    user = await usersService.fetchUserWithEmail(email)
+
     done(null, user)
   } catch (err) {
     done(err)
@@ -54,7 +57,7 @@ async function login(req, email, password, done) {
     }
     const { userid, firstname, lastname, password: passHash } = user
     if (await bcrypt.compare(password, passHash)) {
-      const user = { userid: userid.toString("hex"), email, firstname, lastname }
+      const user = { userid, email, firstname, lastname }
       done(null, user)
     } else {
       done(null, false)
