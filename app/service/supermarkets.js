@@ -1,5 +1,6 @@
 const _ = require("lodash")
 const args = require("app/args")
+const cache = require("app/cache")
 const db = require("mysql2-promise")()
 const logger = require("app/logger").getLogger("va.service")
 
@@ -13,9 +14,14 @@ WHERE placeid IN `
 
 const SQL_INSERT_SUPERMARKETS = "INSERT INTO supermarkets (placeid, retailchainid) VALUES "
 
-module.exports.fetchRetailChains = async function () {
+async function fetchRetailChains() {
   const [ retailChains ] = await db.query(SQL_SELECT_RETAILCHAINS)
   return retailChains
+}
+module.exports.fetchRetailChains = async function () {
+  return await cache.wrap("fetchRetailChains", function() {
+    return fetchRetailChains()
+  }, { ttl: 60 * 60 })
 }
 
 module.exports.fetchByPlaces = async function (places) {

@@ -19,12 +19,12 @@ async function filterNewPlaces(places, retailchains) {
 }
 
 router.get("/", execute(async function(req) {
-	const size = 5
   const { lat, lng } = req.query
 
   let retailchains = await supermarketsService.fetchRetailChains()
 
-  let places = await gmapsService.fetchNearbySupermarkets(lat, lng)
+  let places = (await gmapsService.fetchNearbySupermarkets(lat, lng))
+    .slice(0, 10)
   const placesInDb = await supermarketsService.fetchByPlaces(places)
 
   const placeRetailchainid = {}
@@ -46,8 +46,7 @@ router.get("/", execute(async function(req) {
 
   const supermarkets = places.filter(place => place.retailchainid)
 
-	// supermarkets = supermarkets.slice(0, size)
-	return { supermarkets }
+	return { supermarkets, params: { lat, lng } }
 }))
 
 
