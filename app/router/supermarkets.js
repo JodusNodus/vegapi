@@ -9,11 +9,44 @@ const router = express.Router({
   strict: true
 })
 
+async function filterNewPlaces(places, retailchains) {
+  let newPlaces = places.filter(place => !place.retailchainid)
+  for (const place of newPlaces) {
+    place.retailchainid = await gmapsService.fetchPlaceRetailChain(place, retailchains)
+  }
+  newPlaces = newPlaces.filter(place => place.retailchainid)
+  return newPlaces
+}
+
 router.get("/", execute(async function(req) {
 	const size = 5
   const { lat, lng } = req.query
-  let supermarkets = await gmapsService.fetchNearbySupermarkets(lat, lng)
-	supermarkets = supermarkets.slice(0, size)
+
+  let retailchains = await supermarketsService.fetchRetailChains()
+
+  let places = await gmapsService.fetchNearbySupermarkets(lat, lng)
+  const placesInDb = await supermarketsService.fetchByPlaces(places)
+
+  const placeRetailchainid = {}
+  for (const { placeid, retailchainid } of placesInDb) {
+    placeRetailchainid[placeid] = retailchainid
+  }
+
+  for (const place of places) {
+    place.retailchainid = placeRetailchainid[place.placeid]
+  }
+
+  const newPlaces = await filterNewPlaces(places, retailchains)
+
+  if (newPlaces.length > 0) {
+    // Don't wait for the insert to end before finishing the request
+    supermarketsService.insertSupermarkets(newPlaces)
+      .catch(console.error)
+  }
+
+  const supermarkets = places.filter(place => place.retailchainid)
+
+	// supermarkets = supermarkets.slice(0, size)
 	return { supermarkets }
 }))
 
