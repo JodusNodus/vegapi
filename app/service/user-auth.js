@@ -18,6 +18,8 @@ module.exports = function(passport) {
   passport.use("local-login", new LocalStrategy(passportOptions, login))
 }
 
+const cleanUserObj = (user) => ({ ...user, password: undefined })
+
 function serializeUser(user, done) {
   return done(null, user.userid)
 }
@@ -25,7 +27,7 @@ function serializeUser(user, done) {
 function deserializeUser(userid, done) {
   usersService.fetchUser(userid)
     .then(user => {
-      done(null, user)
+      done(null, cleanUserObj(user))
     })
     .catch(err => done(err))
 }
@@ -43,7 +45,7 @@ async function signup(req, email, password, done) {
     await usersService.insertUser({ userid, passHash, email, firstname, lastname })
     user = await usersService.fetchUserWithEmail(email)
 
-    done(null, user)
+    done(null, cleanUserObj(user))
   } catch (err) {
     done(err)
   }
@@ -55,10 +57,8 @@ async function login(req, email, password, done) {
     if (!user) {
       return done(null, false)
     }
-    const { userid, firstname, lastname, password: passHash } = user
-    if (await bcrypt.compare(password, passHash)) {
-      const user = { userid, email, firstname, lastname }
-      done(null, user)
+    if (await bcrypt.compare(password, user.password)) {
+      done(null, cleanUserObj(user))
     } else {
       done(null, false)
     }

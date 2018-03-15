@@ -2,6 +2,7 @@ const express = require("express")
 
 const { execute } = require("app/executor")
 const productsService = require("app/service/products")
+const supermarketsService = require("app/service/supermarkets")
 
 const router = express.Router({
   mergeParams: true,
@@ -9,10 +10,9 @@ const router = express.Router({
 })
 
 router.get("/", execute(async function(req) {
-  const { categoryid, offset, size, searchquery } = req.query
+  const { offset, size, searchquery } = req.query
   const params = {
     searchquery,
-    categoryid: categoryid ? parseInt(categoryid) : undefined,
     offset: offset ? parseInt(offset) : 0,
     size: size ? parseInt(size) : 10
   }
@@ -20,20 +20,23 @@ router.get("/", execute(async function(req) {
 }))
 
 router.post("/", execute(async function(req) {
-  const { name, ean, categoryid, brandid } = req.body
+  const { name, ean, brandid } = req.body
   const product = {
     ean: Buffer.from(ean, "hex"),
     name,
-    categoryid: parseInt(categoryid),
-    brandid: Buffer.from(brandid, "hex"),
-    creationdate: new Date()
+    brandid: parseInt(brandid),
+    creationdate: new Date(),
+    userid: Buffer.from(req.user.userid, "hex")
   }
   return await productsService.insertProduct(product)
 }))
 
 router.get("/:ean", execute(async function(req) {
+  const { lat, lng } = req.query
   const ean = req.params.ean
-  return await productsService.fetchProduct(ean)
+  const { product } = await productsService.fetchProduct(ean)
+  const supermarkets = await supermarketsService.fetchNearbySupermarkets(lat, lng)
+  return { product, supermarkets, params: { lat, lng }}
 }))
 
 module.exports = router
