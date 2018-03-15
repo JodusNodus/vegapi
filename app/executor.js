@@ -1,27 +1,3 @@
-/*
- * vegapi - https://github.com/jodusnodus/vegapi.git
- *
- * Copyright (c) 2018 JodusNodus
- */
-
-/**
- * Capsules in a Endpoint the service calls and claims Exception
- *
- * **Example**
- * ```js
- * router.post('/user', function (req, res) {
- *   executor.execute(req, res, function (sender) {
- *
- *     const userModel = req.body;
- *     const promise   = service.save(userModel);
- *     const property  = 'result';
- *
- *     sender(promise, property);
- *   });
- * });
- * ```
- */
-
 const httpStatus = require("app/http-status")
 
 module.exports.execute = cb => (req, res) => {

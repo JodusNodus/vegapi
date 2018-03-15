@@ -1,5 +1,6 @@
-const multer  = require("multer")
 const path = require("path")
+const fs = require("fs")
+const multer  = require("multer")
 const sharp  = require("sharp")
 
 const TMP_DIR = "storage/tmp"
@@ -25,3 +26,7 @@ module.exports.writeCover = (picture, ean) => picture
 module.exports.writeThumb = (picture, ean) => picture
   .resize(100, 75)
   .toFile(path.join(THUMB_DIR, ean))
+
+module.exports.getCoverStream = (ean) => fs.createReadStream(path.join(COVER_DIR, ean))
+
+module.exports.getThumbStream = (ean) => fs.createReadStream(path.join(THUMB_DIR, ean))

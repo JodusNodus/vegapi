@@ -1,6 +1,0 @@
-#
-# vegapi - https://github.com/jodusnodus/vegapi.git
-#
-# Copyright (c) 2018 JodusNodus
-#
-# Add here your help message.

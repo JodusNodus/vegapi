@@ -15,6 +15,7 @@ const passport = require("passport")
 const userAuth = require("app/service/user-auth")
 
 const routerAPI = require("app/router/api")
+const routerImages = require("app/router/images")
 
 const app = express()
 
@@ -33,8 +34,6 @@ module.exports.start = function (settings) {
   // set the application title
   app.set("title", info.getAppTitle())
 
-  // Middlewares...
-
   app.use(middleware.measureTime())
 
   app.use(bodyParser.json())
@@ -43,7 +42,7 @@ module.exports.start = function (settings) {
   userAuth(passport)
 
   app.use(session({
-    secret: "cookie cutter",
+    secret: "you shall not murder",
     name: "cookie",
     resave: false,
     saveUninitialized:false
@@ -52,6 +51,7 @@ module.exports.start = function (settings) {
   app.use(passport.session())
 
   app.use("/api", routerAPI)
+  app.use("/images", routerImages)
 
   app.post("/signup", passport.authenticate("local-signup"), execute(async function(req) {
     return { user: req.user }
@@ -66,16 +66,16 @@ module.exports.start = function (settings) {
     return {}
   }))
 
-  app.get("/about", function about(req, res) {
-    res.send({
+  app.get("/about", execute(async function(req) {
+    return {
       name: info.getAppName(),
       title: info.getAppTitle(),
       version: info.getAppVersion(),
       vendor: info.getAppVendor(),
       description: info.getAppDescription(),
       build: info.getBuildTimestamp()
-    })
-  })
+    }
+  }))
 
   const port = configUtil.getSetting(settings, "server.port", 0)
   const host = configUtil.getSetting(settings, "server.host", DEFAULT_HOST)
