@@ -9,6 +9,15 @@ const router = express.Router({
   strict: true
 })
 
+router.use(function(req, res, next) {
+  if (req.session.location) {
+    next()
+  } else {
+    res.status(400)
+    res.send("Location has not been set for the session")
+  }
+})
+
 router.get("/", execute(async function(req) {
   const { offset, size, searchquery } = req.query
   const params = {
@@ -32,11 +41,12 @@ router.post("/", execute(async function(req) {
 }))
 
 router.get("/:ean", execute(async function(req) {
-  const { lat, lng } = req.query
+  const loc = req.session.location
   const ean = req.params.ean
+
   const { product } = await productsService.fetchProduct(ean)
-  const supermarkets = await supermarketsService.fetchNearbySupermarkets(lat, lng)
-  return { product, supermarkets, params: { lat, lng }}
+  const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
+  return { product, supermarkets }
 }))
 
 module.exports = router

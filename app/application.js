@@ -61,7 +61,7 @@ module.exports.start = function (settings) {
     return { user: req.user }
   }))
 
-  app.get("/logout", execute(async function(req) {
+  app.post("/logout", execute(async function(req) {
     req.logout()
     return {}
   }))
