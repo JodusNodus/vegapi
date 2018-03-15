@@ -3,6 +3,7 @@ const LocalStrategy = require("passport-local").Strategy
 const instauuid = require("instauuid")
 const bcrypt = require("../bcrypt")
 const usersService = require("./users")
+const cache = require("app/cache")
 
 module.exports = function(passport) {
 
@@ -24,13 +25,14 @@ function serializeUser(user, done) {
   return done(null, user.userid)
 }
 
-function deserializeUser(userid, done) {
-  usersService.fetchUser(userid)
-    .then(user => {
-      done(null, cleanUserObj(user))
-    })
-    .catch(err => done(err))
-}
+const deserializeUser = (userid, cb) =>
+  cache.wrap(`deserializeUser-${userid}`, function (cacheCallback) {
+    usersService.fetchUser(userid)
+      .then(user => {
+        cacheCallback(null, cleanUserObj(user))
+      })
+      .catch(err => cacheCallback(err))
+  }, {ttl: 60 * 60}, cb);
 
 async function signup(req, email, password, done) {
   try {
