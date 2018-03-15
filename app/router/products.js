@@ -39,6 +39,8 @@ router.post("/", pictureService.upload.single("picture"), execute(async function
     userid: Buffer.from(req.user.userid, "hex")
   }
 
+  await productsService.insertProduct(product)
+
   const picture = await pictureService.process(req.file)
   await pictureService.writeCover(picture, ean)
   await pictureService.writeThumb(picture, ean)
