@@ -2,6 +2,7 @@ const express = require("express")
 
 const { execute } = require("app/executor")
 const productsService = require("app/service/products")
+const pictureService = require("app/service/product-picture")
 const supermarketsService = require("app/service/supermarkets")
 
 const router = express.Router({
@@ -28,7 +29,7 @@ router.get("/", execute(async function(req) {
   return await productsService.fetchAll(params)
 }))
 
-router.post("/", execute(async function(req) {
+router.post("/", pictureService.upload.single("picture"), execute(async function(req) {
   const { name, ean, brandid } = req.body
   const product = {
     ean: Buffer.from(ean, "hex"),
@@ -37,7 +38,10 @@ router.post("/", execute(async function(req) {
     creationdate: new Date(),
     userid: Buffer.from(req.user.userid, "hex")
   }
-  return await productsService.insertProduct(product)
+
+  const picture = await pictureService.process(req.file)
+  await pictureService.writeCover(picture, ean)
+  await pictureService.writeThumb(picture, ean)
 }))
 
 router.get("/:ean", execute(async function(req) {
