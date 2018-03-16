@@ -1,8 +1,9 @@
 const express = require("express")
 
 const routerProducts = require("./products")
-const routerCategories = require("./categories")
 const routerLocation = require("./location")
+const routerBrands = require("./brands")
+const routerLabels = require("./labels")
 
 const router = express.Router({
   mergeParams: true,
@@ -19,7 +20,8 @@ router.use(function(req, res, next) {
 })
 
 router.use("/products", routerProducts)
-// router.use("/categories", routerCategories)
 router.use("/location", routerLocation)
+router.use("/brands", routerBrands)
+router.use("/labels", routerLabels)
 
 module.exports = router

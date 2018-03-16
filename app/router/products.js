@@ -1,10 +1,12 @@
 const express = require("express")
 
+const httpStatus = require("app/http-status")
 const { execute } = require("app/executor")
 const productsService = require("app/service/products")
 const pictureService = require("app/service/product-picture")
 const supermarketsService = require("app/service/supermarkets")
 const userCorrectionsService = require("app/service/user-corrections")
+const labelsService = require("app/service/labels")
 
 const router = express.Router({
   mergeParams: true,
@@ -50,11 +52,16 @@ router.post("/", pictureService.upload.single("picture"), execute(async function
 router.get("/:ean", execute(async function(req) {
   const loc = req.session.location
   const userid = Buffer.from(req.user.userid, "hex")
-  const ean = req.params.ean
+  const ean = Buffer.from(req.params.ean, "hex")
 
-  const { product } = await productsService.fetchProduct(ean, userid)
+  const product = await productsService.fetchProduct(ean, userid)
+  if (!product) {
+    throw httpStatus.NOT_FOUND
+  }
+
   const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
-  return { product, supermarkets }
+  const labels = await labelsService.fetchProductLabels(ean)
+  return { product, supermarkets, labels }
 }))
 
 router.delete("/:ean", execute(async function(req) {

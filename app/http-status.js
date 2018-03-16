@@ -1,26 +1,10 @@
-/*
- * vegapi - https://github.com/jodusnodus/vegapi.git
- *
- * Copyright (c) 2018 JodusNodus
- */
-
-/**
- * Manages the sending of an promise callback.
- *
- * @module va/http-status
- */
-
-"use strict"
-
-var httpStatus = {}
-
-Object.defineProperty(httpStatus, "OKAY",           { value: 200, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "BAD_REQUEST",    { value: 400, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "UNAUTHORIZED",   { value: 401, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "FORBIDDEN",      { value: 403, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "NOT_FOUND",      { value: 404, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "NOT_ALLOW",      { value: 405, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "NOT_ACCEPTABLE", { value: 406, writable: false, enumerable: true})
-Object.defineProperty(httpStatus, "SERVER_ERROR",   { value: 500, writable: false, enumerable: true})
-
-module.exports = httpStatus
+module.exports = {
+  OKAY: 200,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  NOT_ALLOW: 405,
+  NOT_ACCEPTABLE: 406,
+  SERVER_ERROR: 500
+}

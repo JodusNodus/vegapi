@@ -15,11 +15,13 @@ module.exports.execute = cb => (req, res) => {
       res.send({ status: "okay", result })
     })
     .catch(function (error) {
+      const httpCode = typeof error === "number"
+        ? error
+        : httpStatus.BAD_REQUEST
       var data = {
         status: "error",
-        error: error.message
+        error: typeof error === "number" ? httpStatus[httpCode] : error.message
       }
-      res.status(httpStatus.BAD_REQUEST)
-        .send(data)
+      res.status(httpCode).send(data)
     })
 }

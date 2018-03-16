@@ -1,7 +1,7 @@
 const express = require("express")
 
 const { execute } = require("app/executor")
-const categoriesService = require("app/service/categories")
+const labelsService = require("app/service/labels")
 
 const router = express.Router({
   caseSensitive: true,
@@ -10,7 +10,7 @@ const router = express.Router({
 })
 
 router.get("/", execute(async function () {
-  return await categoriesService.fetchAll()
+  return await labelsService.fetchAll()
 }))
 
 module.exports = router
