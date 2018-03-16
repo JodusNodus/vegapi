@@ -6,7 +6,9 @@ const productsService = require("app/service/products")
 const pictureService = require("app/service/product-picture")
 const supermarketsService = require("app/service/supermarkets")
 const userCorrectionsService = require("app/service/user-corrections")
+const userRatingsService = require("app/service/user-ratings")
 const labelsService = require("app/service/labels")
+const brandsService = require("app/service/brands")
 
 const router = express.Router({
   mergeParams: true,
@@ -29,24 +31,49 @@ router.get("/", execute(async function(req) {
     offset: offset ? parseInt(offset) : 0,
     size: size ? parseInt(size) : 10
   }
-  return await productsService.fetchAll(params)
+  const products = await productsService.fetchAll(params)
+  return { products, params }
 }))
 
 router.post("/", pictureService.upload.single("picture"), execute(async function(req) {
-  const { name, ean, brandid } = req.body
+  let { name, ean, brandid, brandname, labels="" } = req.body
+  ean = Buffer.from(ean, "hex")
+
+  labels = labels.split(";")
+  const newLabels = labels
+    .filter(s => isNaN(new Number(s)))
+
+  if (newLabels.length > 0) {
+    const newLabelIds = await labelsService.insertLabels(newLabels)
+  }
+
+  let labelIds = labels
+    .map(s => new Number(s))
+    .filter(x => !isNaN(x))
+    .concat(newLabelIds)
+
+  await labelsService.addProductLabels(ean, labelIds)
+
+  brandid = parseInt(brandid)
+  if (isNaN(brandid) && brandname) {
+    brandid = await brandsService.insertBrand(brandname)
+  }
+
   const product = {
-    ean: Buffer.from(ean, "hex"),
+    ean,
     name,
-    brandid: parseInt(brandid),
+    brandid,
     creationdate: new Date(),
     userid: Buffer.from(req.user.userid, "hex")
   }
 
   await productsService.insertProduct(product)
 
-  const picture = await pictureService.process(req.file)
-  await pictureService.writeCover(picture, ean)
-  await pictureService.writeThumb(picture, ean)
+  if (req.file) {
+    const picture = await pictureService.process(req.file)
+    await pictureService.writeCover(picture, req.body.ean)
+    await pictureService.writeThumb(picture, req.body.ean)
+  }
 }))
 
 router.get("/:ean", execute(async function(req) {
@@ -62,6 +89,19 @@ router.get("/:ean", execute(async function(req) {
   const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
   const labels = await labelsService.fetchProductLabels(ean)
   return { product, supermarkets, labels }
+}))
+
+
+router.post("/:ean/rate", execute(async function(req) {
+  const rating = parseInt(req.body.rating)
+  const userid = Buffer.from(req.user.userid, "hex")
+  const ean = Buffer.from(req.params.ean, "hex")
+
+  try {
+    await userRatingsService.addRating(userid, ean, rating)
+  } catch(err) {
+    // User has already rated this product
+  }
 }))
 
 router.delete("/:ean", execute(async function(req) {

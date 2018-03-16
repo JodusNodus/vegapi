@@ -10,12 +10,8 @@ const router = express.Router({
 })
 
 router.get("/", execute(async function () {
-  return await brandsService.fetchAll()
-}))
-
-router.post("/", execute(async function (req) {
-  const { name } = req.body
-  await brandsService.insertBrand(name)
+  const brands = await brandsService.fetchAll()
+  return { brands }
 }))
 
 module.exports = router

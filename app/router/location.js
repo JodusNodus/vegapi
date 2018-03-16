@@ -32,14 +32,11 @@ router.post("/", execute(async function(req) {
       return
     }
   }
-
   req.session.location = newLoc
 
   // Prefetch & cache supermarkets in area
   supermarketsService.fetchNearbySupermarkets(newLoc.lat, newLoc.lng)
     .catch(console.error)
-
-  return
 }))
 
 module.exports = router

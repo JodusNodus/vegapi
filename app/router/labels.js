@@ -10,7 +10,8 @@ const router = express.Router({
 })
 
 router.get("/", execute(async function () {
-  return await labelsService.fetchAll()
+  const labels = await labelsService.fetchAll()
+  return { labels }
 }))
 
 module.exports = router
