@@ -1,5 +1,5 @@
 const express = require("express")
-const { check } = require("express-validator/check")
+const { check, oneOf } = require("express-validator/check")
 const { matchedData, sanitize } = require("express-validator/filter")
 
 const httpStatus = require("app/http-status")
@@ -27,7 +27,7 @@ router.use(function(req, res, next) {
 })
 
 router.get("/", [
-	check("searchquery").exists().isLength({ min: 4 }),
+	check("searchquery").exists().isLength({ min: 3 }),
 	sanitize("offset").toInt(),
 	sanitize("size").toInt(),
 ], execute(async function(req) {
@@ -41,7 +41,17 @@ router.get("/", [
   return { products, params }
 }))
 
-router.post("/", pictureService.upload.single("picture"), execute(async function(req) {
+router.post("/", [
+  check("name").exists(),
+  check("ean").isHexadecimal(),
+	oneOf([
+		check("brandid").isInt(),
+		check("brandname").exists(),
+	]),
+  check("labels").exists(),
+  sanitize("brandid").toInt(),
+	pictureService.upload.single("picture")
+], execute(async function(req) {
   let { name, ean, brandid, brandname, labels="" } = req.body
   ean = Buffer.from(ean, "hex")
 
