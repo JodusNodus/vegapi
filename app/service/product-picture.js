@@ -27,6 +27,17 @@ module.exports.writeThumb = (picture, ean) => picture
   .resize(100, 75)
   .toFile(path.join(THUMB_DIR, ean))
 
-module.exports.getCoverStream = (ean) => fs.createReadStream(path.join(COVER_DIR, ean))
+const getStream = (ean, baseDir) => new Promise((res, rej) => {
+  const file = path.join(baseDir, ean)
+  fs.exists(file, (exists) => {
+    if (exists) {
+      res(fs.createReadStream(file))
+    } else {
+      rej()
+    }
+  })
+})
 
-module.exports.getThumbStream = (ean) => fs.createReadStream(path.join(THUMB_DIR, ean))
+module.exports.getCoverStream = (ean) => getStream(ean, COVER_DIR)
+
+module.exports.getThumbStream = (ean) => getStream(ean, THUMB_DIR)

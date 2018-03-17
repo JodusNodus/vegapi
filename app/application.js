@@ -11,6 +11,9 @@ const logger = require("app/logger").getLogger("va")
 
 const middleware = require("app/middleware")
 
+const { check } = require("express-validator/check")
+const { matchedData, sanitize } = require("express-validator/filter")
+
 const passport = require("passport")
 const userAuth = require("app/service/user-auth")
 
@@ -53,28 +56,27 @@ module.exports.start = function (settings) {
   app.use("/api", routerAPI)
   app.use("/images", routerImages)
 
-  app.post("/signup", passport.authenticate("local-signup"), execute(async function(req) {
+  app.post("/signup", [
+    check("email").isEmail(),
+    check("password").exists(),
+    check("firstname").exists(),
+    check("lastname").exists(),
+    passport.authenticate("local-signup"),
+  ], execute(async function(req) {
     return { user: req.user }
   }))
 
-  app.post("/login", passport.authenticate("local-login"), execute(async function(req) {
+  app.post("/login", [
+    check("email").isEmail(),
+    check("password").exists(),
+    passport.authenticate("local-login"),
+  ], execute(async function(req) {
     return { user: req.user }
   }))
 
   app.post("/logout", execute(async function(req) {
     req.logout()
     return {}
-  }))
-
-  app.get("/about", execute(async function(req) {
-    return {
-      name: info.getAppName(),
-      title: info.getAppTitle(),
-      version: info.getAppVersion(),
-      vendor: info.getAppVendor(),
-      description: info.getAppDescription(),
-      build: info.getBuildTimestamp()
-    }
   }))
 
   const port = configUtil.getSetting(settings, "server.port", 0)

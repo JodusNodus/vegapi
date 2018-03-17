@@ -1,4 +1,6 @@
 const express = require("express")
+const { check } = require("express-validator/check")
+const { matchedData, sanitize } = require("express-validator/filter")
 
 const httpStatus = require("app/http-status")
 const { execute } = require("app/executor")
@@ -24,7 +26,11 @@ router.use(function(req, res, next) {
   }
 })
 
-router.get("/", execute(async function(req) {
+router.get("/", [
+	check("searchquery").exists().isLength({ min: 4 }),
+	sanitize("offset").toInt(),
+	sanitize("size").toInt(),
+], execute(async function(req) {
   const { offset, size, searchquery } = req.query
   const params = {
     searchquery,
@@ -76,7 +82,9 @@ router.post("/", pictureService.upload.single("picture"), execute(async function
   }
 }))
 
-router.get("/:ean", execute(async function(req) {
+router.get("/:ean", [
+  check("ean").isHexadecimal()
+], execute(async function(req) {
   const loc = req.session.location
   const userid = Buffer.from(req.user.userid, "hex")
   const ean = Buffer.from(req.params.ean, "hex")
@@ -92,8 +100,12 @@ router.get("/:ean", execute(async function(req) {
 }))
 
 
-router.post("/:ean/rate", execute(async function(req) {
-  const rating = parseInt(req.body.rating)
+router.post("/:ean/rate", [
+  check("ean").isHexadecimal(),
+  check("rating").isInt({ min: 0, max: 5 }),
+  sanitize("rating").toInt()
+], execute(async function(req) {
+	const { rating } = req.body
   const userid = Buffer.from(req.user.userid, "hex")
   const ean = Buffer.from(req.params.ean, "hex")
 
@@ -104,7 +116,9 @@ router.post("/:ean/rate", execute(async function(req) {
   }
 }))
 
-router.delete("/:ean", execute(async function(req) {
+router.delete("/:ean", [
+  check("ean").isHexadecimal()
+], execute(async function(req) {
   const userid = Buffer.from(req.user.userid, "hex")
   const ean = Buffer.from(req.params.ean, "hex")
 

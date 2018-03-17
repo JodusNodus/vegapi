@@ -1,5 +1,7 @@
 const express = require("express")
 const geolib = require("geolib")
+const { check } = require("express-validator/check")
+const { matchedData, sanitize } = require("express-validator/filter")
 
 const { execute } = require("app/executor")
 const productsService = require("app/service/products")
@@ -12,13 +14,16 @@ const router = express.Router({
 
 const formatGeolibLoc = ({ lat, lng }) => ({latitude: lat, longitude: lng})
 
-router.post("/", execute(async function(req) {
-  const { lat, lng } = req.body
+router.post("/", [
+  check("lat").isFloat(),
+  check("lng").isFloat(),
+  sanitize("lat").toFloat(),
+  sanitize("lng").toFloat()
+], execute(async function(req) {
+
   const oldLoc = req.session.location
-  const newLoc = {
-    lat: parseFloat(lat),
-    lng: parseFloat(lng)
-  }
+  const newLoc = matchedData(req)
+
   if (oldLoc) {
     if (oldLoc.lat == newLoc.lat && oldLoc.lng == newLoc.lng) {
       return

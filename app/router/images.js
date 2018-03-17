@@ -1,5 +1,7 @@
 const express = require("express")
+const { check, validationResult } = require("express-validator/check")
 
+const httpStatus = require("app/http-status")
 const pictureService = require("app/service/product-picture")
 
 const router = express.Router({
@@ -16,17 +18,27 @@ router.use(function(req, res, next) {
   }
 })
 
+const routeMiddleware = [ check("ean").isHexadecimal() ]
 const routeImage = getStreamFunc => async function(req, res) {
+  if (!validationResult(req).isEmpty()) {
+    res.status(httpStatus.BAD_REQUEST)
+    res.send()
+    return
+  }
   try {
-    const { ean } = req.params
+    let ean = Buffer
+      .from(req.params.ean, "hex")
+      .toString("hex")
     res.setHeader("Content-Type", "image/jpeg")
-    getStreamFunc(ean).pipe(res)
+    const stream = await getStreamFunc(ean)
+    stream.pipe(res)
   } catch (err) {
-    res.sendStatus(404)
+    res.status(httpStatus.NOT_FOUND)
+    res.send()
   }
 }
 
-router.get("/covers/:ean", routeImage(pictureService.getCoverStream))
-router.get("/thumbnails/:ean", routeImage(pictureService.getThumbStream))
+router.get("/covers/:ean", routeMiddleware, routeImage(pictureService.getCoverStream))
+router.get("/thumbnails/:ean", routeMiddleware, routeImage(pictureService.getThumbStream))
 
 module.exports = router
