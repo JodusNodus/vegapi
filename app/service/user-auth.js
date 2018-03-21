@@ -41,10 +41,9 @@ async function signup(req, email, password, done) {
     if (user) {
       return done(null, false)
     }
-    const userid = instauuid("buffer")
     const passHash = await bcrypt.hash(password)
 
-    await usersService.insertUser({ userid, passHash, email, firstname, lastname })
+    await usersService.insertUser({ email, firstname, passHash, lastname })
     user = await usersService.fetchUserWithEmail(email)
 
     done(null, cleanUserObj(user))

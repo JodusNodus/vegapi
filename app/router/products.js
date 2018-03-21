@@ -29,7 +29,7 @@ router.use(function(req, res, next) {
 router.get("/", [
 	check("searchquery").exists().isLength({ min: 3 }),
 	sanitize("offset").toInt(),
-	sanitize("size").toInt(),
+	sanitize("size").toInt()
 ], execute(async function(req) {
   const { offset, size, searchquery } = req.query
   const params = {
@@ -43,18 +43,17 @@ router.get("/", [
 
 router.post("/", [
   check("name").exists(),
-  check("ean").isHexadecimal(),
+  check("ean").isInt(),
 	oneOf([
 		check("brandid").isInt(),
 		check("brandname").exists(),
 	]),
   check("labels").exists(),
+  sanitize("ean").toInt(),
   sanitize("brandid").toInt(),
 	pictureService.upload.single("picture")
 ], execute(async function(req) {
   let { name, ean, brandid, brandname, labels="" } = req.body
-  ean = Buffer.from(ean, "hex")
-
   labels = labels.split(";")
   const newLabels = labels
     .filter(s => isNaN(new Number(s)))
@@ -80,7 +79,7 @@ router.post("/", [
     name,
     brandid,
     creationdate: new Date(),
-    userid: Buffer.from(req.user.userid, "hex")
+    userid: req.user.userid
   }
 
   await productsService.insertProduct(product)
@@ -93,11 +92,12 @@ router.post("/", [
 }))
 
 router.get("/:ean", [
-  check("ean").isHexadecimal()
+  check("ean").isInt(),
+  sanitize("ean").toInt(),
 ], execute(async function(req) {
   const loc = req.session.location
-  const userid = Buffer.from(req.user.userid, "hex")
-  const ean = Buffer.from(req.params.ean, "hex")
+  const userid = req.user.userid
+  const ean = req.params.ean
 
   const product = await productsService.fetchProduct(ean, userid)
   if (!product) {
@@ -111,13 +111,14 @@ router.get("/:ean", [
 
 
 router.post("/:ean/rate", [
-  check("ean").isHexadecimal(),
+  check("ean").isInt(),
+  sanitize("ean").toInt(),
   check("rating").isInt({ min: 0, max: 5 }),
   sanitize("rating").toInt()
 ], execute(async function(req) {
 	const { rating } = req.body
-  const userid = Buffer.from(req.user.userid, "hex")
-  const ean = Buffer.from(req.params.ean, "hex")
+  const userid = req.user.userid
+  const ean = req.params.ean
 
   try {
     await userRatingsService.addRating(userid, ean, rating)
@@ -127,10 +128,11 @@ router.post("/:ean/rate", [
 }))
 
 router.delete("/:ean", [
-  check("ean").isHexadecimal()
+  check("ean").isInt(),
+  sanitize("ean").toInt()
 ], execute(async function(req) {
-  const userid = Buffer.from(req.user.userid, "hex")
-  const ean = Buffer.from(req.params.ean, "hex")
+  const userid = req.user.userid
+  const ean = req.params.ean
 
   try {
     await userCorrectionsService.addCorrection(userid, ean)
