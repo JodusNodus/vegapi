@@ -58,7 +58,7 @@ module.exports.fetchProduct = async function (ean, userid) {
   }
   const product = nestProductJoins(rows[0])
   product.userHasCorrected = !!product.userHasCorrected
-  product.rating = Math.round(parseFloat(product.rating))
+  product.rating = Math.round(product.rating || 0)
   return product
 }
 
