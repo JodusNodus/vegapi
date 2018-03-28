@@ -1,9 +1,11 @@
 const bodyParser = require("body-parser")
 const cookieParser = require("cookie-parser")
 const session = require("express-session")
+const MemcachedStore = require('connect-memjs')(session)
 const express = require("express")
 const Q = require("q")
 
+const cache = require("app/cache")
 const { execute } = require("app/executor")
 const info = require("app/info")
 const configUtil = require("app/config-util")
@@ -22,8 +24,6 @@ const routerImages = require("app/router/images")
 
 const app = express()
 
-const DEFAULT_HOST = "localhost"
-
 /**
  * starts the application.
  *
@@ -31,6 +31,9 @@ const DEFAULT_HOST = "localhost"
  * @return {promise} the promise resolve callback is returns after the application is listening.
  */
 module.exports.start = function (settings) {
+
+  app.disable("etag")
+  app.set("trust proxy", true)
 
   // add the config instance under "config".
   app.set("settings", settings)
@@ -40,16 +43,19 @@ module.exports.start = function (settings) {
   app.use(middleware.measureTime())
 
   app.use(bodyParser.json())
-  app.use(cookieParser())
+  // app.use(cookieParser())
 
   userAuth(passport)
 
-  app.use(session({
-    secret: "you shall not murder",
-    name: "cookie",
+  const sessionConfig = {
+    store: new MemcachedStore({ client: cache.client }),
+    secret: configUtil.getSetting(settings, "secret"),
+    sign: true,
     resave: false,
     saveUninitialized:false
-  }))
+  }
+  app.use(session(sessionConfig))
+
   app.use(passport.initialize())
   app.use(passport.session())
 
@@ -80,13 +86,12 @@ module.exports.start = function (settings) {
   }))
 
   const port = configUtil.getSetting(settings, "server.port", 0)
-  const host = configUtil.getSetting(settings, "server.host", DEFAULT_HOST)
 
   const done = Q.defer()
 
   if (port > 0) {
-    app.listen(port, host, function () {
-      logger.info("Server is listen http://", host, ":", port)
+    app.listen(port, function () {
+      logger.info(`Server is listenening on ${port}`)
       done.resolve(true)
     })
   } else {

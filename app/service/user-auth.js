@@ -25,14 +25,18 @@ function serializeUser(user, done) {
   return done(null, user.userid)
 }
 
-const deserializeUser = (userid, cb) =>
-  cache.wrap(`deserializeUser-${userid}`, function (cacheCallback) {
-    usersService.fetchUser(userid)
-      .then(user => {
-        cacheCallback(null, cleanUserObj(user))
-      })
-      .catch(err => cacheCallback(err))
-  }, {ttl: 60 * 60}, cb);
+async function deserializeUser (userid, cb) {
+  try {
+    const user = await usersService.fetchUser(userid)
+    if (!user) {
+      cb("not found")
+    } else {
+      cb(null, user)
+    }
+  } catch(err) {
+    cb(err)
+  }
+}
 
 async function signup(req, email, password, done) {
   try {

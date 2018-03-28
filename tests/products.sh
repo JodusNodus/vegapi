@@ -1,1 +1,1 @@
-http --session=/tmp/session.json "localhost:18080/api/products?searchquery=fruit"
+http --session=/tmp/session.json "https://vegapi-197219.appspot.com/api/products?searchquery=fruit"

@@ -26,6 +26,7 @@
 //
 require("app-module-path").addPath(__dirname)
 
+const http      = require("http")
 const fs        = require("fs")
 const path      = require("path")
 
@@ -33,6 +34,8 @@ const info      = require("app/info")
 const args      = require("app/args")
 const configure = require("app/configure")
 const shutdown  = require("app/shutdown")
+
+http.globalAgent.maxSockets = 50
 
 
 if (args.isHelp()) {
@@ -67,6 +70,8 @@ configure(configureOptions)
             // print the header
             _printHeaderAndHero(logger)
             logger.info("Logger is started...")
+            // initialize cache
+            require("app/cache").start(settings)
             // initialize DB
             require("app/db").start(settings)
             logger.info("Connection pool is started successful...")

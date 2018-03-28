@@ -40,10 +40,8 @@ let mPool = null
 module.exports.start = function (settings) {
   if (!mPool) {
     logger.info("create connection pool.")
-    mPool = mysql.configure({
+    const config = {
       namedPlaceholders: true,
-      host:     configUtil.getSetting(settings, "db.host", "localhost"),
-      port:     configUtil.getSetting(settings, "db.port", 3306),
       user:     configUtil.getSetting(settings, "db.user", "root"),
       password: configUtil.getSetting(settings, "db.password", "test1234"),
       database: configUtil.getSetting(settings, "db.database", ""),
@@ -60,7 +58,15 @@ module.exports.start = function (settings) {
           return text
         })
       }
-    })
+    }
+		const instance = configUtil.getSetting(settings, "db.instance")
+		if (instance && process.env.NODE_ENV === 'production') {
+      config.socketPath = `/cloudsql/${instance}`
+		} else {
+			config.host = configUtil.getSetting(settings, "db.host", "localhost")
+			config.port = configUtil.getSetting(settings, "db.port", 3306)
+		}
+    mPool = mysql.configure(config)
     logger.info("add the shutdown callback for close the connection pool...")
     require("app/shutdown").addListener(function (name) {
       if (mPool && _.isFunction(mPool.end)) {
