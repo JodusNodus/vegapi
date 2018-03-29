@@ -11,6 +11,7 @@ const userCorrectionsService = require("app/service/user-corrections")
 const userRatingsService = require("app/service/user-ratings")
 const labelsService = require("app/service/labels")
 const brandsService = require("app/service/brands")
+const gvisionService = require("app/service/gvision")
 
 const router = express.Router({
   mergeParams: true,
@@ -41,6 +42,33 @@ router.get("/", [
   return { products, params }
 }))
 
+router.post("/picture", [
+	pictureService.upload.single("picture")
+], execute(async function(req) {
+  const userid = req.user.userid
+  const ean = parseInt(req.body.ean)
+  if (isNaN(ean) || !req.file) {
+    throw httpStatus.BAD_REQUEST
+  }
+  if (await productsService.fetchProduct(ean, userid)) {
+    throw httpStatus.BAD_REQUEST
+  }
+  const picture = await pictureService.process(req.file)
+  const coverBuffer = await pictureService.coverBuffer(picture)
+  const { isSafe, labelSuggestions, brandSuggestions } = await gvisionService.getImageSuggestions(coverBuffer)
+  if (!isSafe) {
+    throw new Error("Adult, violent or racy pictures are not allowed.")
+  }
+
+  // Do work but send request back
+  (async function() {
+    const thumbBuffer = await pictureService.thumbBuffer(picture)
+  })()
+
+  return { labelSuggestions, brandSuggestions }
+}))
+
+
 router.post("/", [
   check("name").exists(),
   check("ean").isInt(),
@@ -51,26 +79,18 @@ router.post("/", [
   check("labels").exists(),
   sanitize("ean").toInt(),
   sanitize("brandid").toInt(),
-	pictureService.upload.single("picture")
 ], execute(async function(req) {
   let { name, ean, brandid, brandname, labels="" } = req.body
   labels = labels.split(";")
-  const newLabels = labels
-    .filter(s => isNaN(new Number(s)))
 
-  if (newLabels.length > 0) {
-    const newLabelIds = await labelsService.insertLabels(newLabels)
+  let labelIds = []
+  if (labels.length > 0) {
+    labelIds = await labelsService.insertLabels(newLabels)
   }
-
-  let labelIds = labels
-    .map(s => new Number(s))
-    .filter(x => !isNaN(x))
-    .concat(newLabelIds)
 
   await labelsService.addProductLabels(ean, labelIds)
 
-  brandid = parseInt(brandid)
-  if (isNaN(brandid) && brandname) {
+  if (!brandid && brandname) {
     brandid = await brandsService.insertBrand(brandname)
   }
 
@@ -83,12 +103,6 @@ router.post("/", [
   }
 
   await productsService.insertProduct(product)
-
-  if (req.file) {
-    const picture = await pictureService.process(req.file)
-    await pictureService.writeCover(picture, req.body.ean)
-    await pictureService.writeThumb(picture, req.body.ean)
-  }
 }))
 
 router.get("/:ean", [

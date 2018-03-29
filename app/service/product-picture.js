@@ -1,13 +1,10 @@
+const os = require("os")
 const path = require("path")
 const fs = require("fs")
 const multer  = require("multer")
 const sharp  = require("sharp")
 
-const TMP_DIR = "storage/tmp"
-const COVER_DIR = "storage/covers"
-const THUMB_DIR = "storage/thumbnails"
-
-const upload = multer({ dest: TMP_DIR })
+const upload = multer({ dest: os.tmpdir() })
 
 module.exports.upload = upload
 
@@ -16,16 +13,16 @@ module.exports.process = (file) => sharp(file.path)
   .rotate()
   .normalise()
   .jpeg({
-    quality: 70
+    quality: 65
   })
 
-module.exports.writeCover = (picture, ean) => picture
+module.exports.coverBuffer = (picture) => picture
   .resize(320, 240)
-  .toFile(path.join(COVER_DIR, ean))
+  .toBuffer()
   
-module.exports.writeThumb = (picture, ean) => picture
+module.exports.thumbBuffer = (picture) => picture
   .resize(100, 75)
-  .toFile(path.join(THUMB_DIR, ean))
+  .toBuffer()
 
 const getStream = (ean, baseDir) => new Promise((res, rej) => {
   const file = path.join(baseDir, ean)
