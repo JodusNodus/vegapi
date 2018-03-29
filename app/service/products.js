@@ -16,6 +16,8 @@ WHERE p.name LIKE CONCAT('%', :searchquery, '%')`
 
 const SQL_PAGINATION = "\nLIMIT :offset, :size"
 
+const SQL_PRODUCT_EXISTS = `SELECT ean FROM products WHERE ean = ?`
+
 const SQL_SELECT_PRODUCT = `
 SELECT p.ean, p.name, DATE_FORMAT(p.creationdate, "%d/%m/%Y") as creationdate,
 u.userid, u.firstname, u.lastname,
@@ -49,6 +51,11 @@ module.exports.fetchAll = async function (params) {
   let [ products ] = await db.execute(stmt, params)
   products = products.map(nestProductJoins)
   return products
+}
+
+module.exports.productExists = async function(ean) {
+  const [ rows ] = await db.execute(SQL_PRODUCT_EXISTS, [ ean ])
+  return rows.length > 0
 }
 
 module.exports.fetchProduct = async function (ean, userid) {

@@ -51,7 +51,7 @@ router.post("/picture", [
   if (isNaN(ean) || !req.file) {
     throw httpStatus.BAD_REQUEST
   }
-  if (await productsService.fetchProduct(ean, userid)) {
+  if (await productsService.productExists(ean)) {
     throw httpStatus.BAD_REQUEST
   }
   const picture = await pictureService.process(req.file)
@@ -73,28 +73,40 @@ router.post("/picture", [
 
 
 router.post("/", [
-  check("name").exists(),
   check("ean").isInt(),
-	oneOf([
-		check("brandid").isInt(),
-		check("brandname").exists(),
-	]),
+  check("name").exists(),
+  check("brandname").exists(),
   check("labels").exists(),
   sanitize("ean").toInt(),
-  sanitize("brandid").toInt(),
 ], execute(async function(req) {
-  let { name, ean, brandid, brandname, labels="" } = req.body
-  labels = labels.split(";")
+  const userid = req.user.userid
+  let { name, ean, brandname, labels: labelNames } = req.body
 
-  let labelIds = []
-  if (labels.length > 0) {
-    labelIds = await labelsService.insertLabels(newLabels)
+  if (await productsService.productExists(ean)) {
+    throw httpStatus.BAD_REQUEST
+  }
+  if (!await storageService.exists(`thumb-${ean}`)) {
+    throw httpStatus.BAD_REQUEST
   }
 
-  await labelsService.addProductLabels(ean, labelIds)
-
-  if (!brandid && brandname) {
+  const brand = await brandsService.fetchWithName(brandname)
+  let brandid
+  if (brand) {
+    brandid = brand.brandid
+  } else {
     brandid = await brandsService.insertBrand(brandname)
+  }
+
+  const labels = await labelsService.fetchLabelsWithName(labelNames)
+
+  let labelIds = labels
+    .map(label => label.labelid)
+
+  const newLabelNames = labelNames
+    .filter(str => !labels.find(label => label.name == str))
+  if (newLabelNames.length > 0) {
+    const newLabelIds = await labelsService.insertLabels(newLabelNames)
+    labelIds = labelIds.concat(newLabelIds)
   }
 
   const product = {
@@ -102,10 +114,11 @@ router.post("/", [
     name,
     brandid,
     creationdate: new Date(),
-    userid: req.user.userid
+    userid
   }
-
   await productsService.insertProduct(product)
+
+  await labelsService.addProductLabels(ean, labelIds)
 }))
 
 router.get("/:ean", [
@@ -121,11 +134,13 @@ router.get("/:ean", [
     throw httpStatus.NOT_FOUND
   }
 
+  product.labels = await labelsService.fetchProductLabels(ean)
+  product.thumbPicture = `https://storage.googleapis.com/vegstorage/thumb-${ean}`
+  product.coverPicture = `https://storage.googleapis.com/vegstorage/cover-${ean}`
+
   const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
-  const labels = await labelsService.fetchProductLabels(ean)
-  const thumbPicture = `https://storage.googleapis.com/vegstorage/thumb-${ean}`
-  const coverPicture = `https://storage.googleapis.com/vegstorage/cover-${ean}`
-  return { thumbPicture, coverPicture, product, supermarkets, labels }
+
+  return { product, supermarkets }
 }))
 
 

@@ -3,7 +3,7 @@ const args = require("app/args")
 const db = require("mysql2-promise")()
 const logger = require("app/logger").getLogger("va.service")
 
-const SQL_SELECT_ALL = "SELECT * FROM labels"
+const SQL_SELECT_ALL = "SELECT labelid, name FROM labels"
 const SQL_SELECT_PRODUCT = `
 SELECT l.* FROM productlabels pl
 JOIN labels l
@@ -22,6 +22,14 @@ module.exports.fetchAll = async function (options) {
 
 module.exports.fetchProductLabels = async function (ean) {
   const [ labels ] = await db.execute(SQL_SELECT_PRODUCT, [ ean ])
+  return labels
+}
+
+module.exports.fetchLabelsWithName = async function (labelnames) {
+  const labelstr = labelnames
+    .map(name => `'${name}'`)
+    .join(",")
+  const [ labels ] = await db.query(`${SQL_SELECT_ALL} WHERE name IN (${labelstr})`)
   return labels
 }
 

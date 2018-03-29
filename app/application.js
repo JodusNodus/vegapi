@@ -82,6 +82,7 @@ module.exports.start = function (settings) {
 
   app.post("/logout", execute(async function(req) {
     req.logout()
+    req.session.destroy()
     return {}
   }))
 

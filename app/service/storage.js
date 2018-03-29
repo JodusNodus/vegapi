@@ -19,3 +19,9 @@ module.exports.uploadPicture = async function(name, buffer) {
     },
   })
 }
+
+module.exports.exists = async function(name) {
+  const blob = bucket.file(name)
+  const data = await blob.exists()
+  return data[0]
+}
