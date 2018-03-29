@@ -21,6 +21,7 @@
     "va": "server.js"
   },
   "dependencies": {
+    "@google-cloud/storage": "^1.6.0",
     "app-module-path": "2.2.0",
     "async": "^2.6.0",
     "bcrypt": "^1.0.3",

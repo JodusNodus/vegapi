@@ -12,6 +12,7 @@ const userRatingsService = require("app/service/user-ratings")
 const labelsService = require("app/service/labels")
 const brandsService = require("app/service/brands")
 const gvisionService = require("app/service/gvision")
+const storageService = require("app/service/storage")
 
 const router = express.Router({
   mergeParams: true,
@@ -55,14 +56,16 @@ router.post("/picture", [
   }
   const picture = await pictureService.process(req.file)
   const coverBuffer = await pictureService.coverBuffer(picture)
-  const { isSafe, labelSuggestions, brandSuggestions } = await gvisionService.getImageSuggestions(coverBuffer)
-  if (!isSafe) {
-    throw new Error("Adult, violent or racy pictures are not allowed.")
+  const { safe, labelSuggestions, brandSuggestions } = await gvisionService.getImageSuggestions(coverBuffer)
+  if (!safe) {
+    throw new Error("Adult, violent or racy pictures are not allowed. If this is not the case please try taking another picture.")
   }
 
   // Do work but send request back
   (async function() {
     const thumbBuffer = await pictureService.thumbBuffer(picture)
+    storageService.uploadPicture(`thumb-${ean}`, thumbBuffer)
+    storageService.uploadPicture(`cover-${ean}`, coverBuffer)
   })()
 
   return { labelSuggestions, brandSuggestions }
@@ -120,7 +123,9 @@ router.get("/:ean", [
 
   const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
   const labels = await labelsService.fetchProductLabels(ean)
-  return { product, supermarkets, labels }
+  const thumbPicture = `https://storage.googleapis.com/vegstorage/thumb-${ean}`
+  const coverPicture = `https://storage.googleapis.com/vegstorage/cover-${ean}`
+  return { thumbPicture, coverPicture, product, supermarkets, labels }
 }))
 
 
