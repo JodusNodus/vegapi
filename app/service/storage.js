@@ -25,3 +25,9 @@ module.exports.exists = async function(name) {
   const data = await blob.exists()
   return data[0]
 }
+
+module.exports.getThumbURL = (ean) =>
+  `https://storage.googleapis.com/vegstorage/thumb-${ean}`
+
+module.exports.getCoverURL = (ean) =>
+  `https://storage.googleapis.com/vegstorage/cover-${ean}`

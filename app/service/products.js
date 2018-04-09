@@ -38,17 +38,16 @@ VALUES (?, ?, ?, ?, ?)`
 
 const nestProductJoins = ({ brandid, brandname, userid, firstname, lastname, ...product }) => ({
   ...product,
-  brand: { brandid, brandname },
+  brand: { brandid, name: brandname },
   user: userid ? { userid, firstname, lastname } : undefined,
 })
 
-module.exports.fetchAll = async function (params) {
+module.exports.fetchAll = async function ({ searchquery, size, page }) {
+  const offset = size * (page - 1)
   let stmt = SQL_SELECT_ALL
-  if (params.searchquery) {
-    stmt += SQL_FUZZY_SEARCH_FILTER
-  }
-  stmt += SQL_PAGINATION
-  let [ products ] = await db.execute(stmt, params)
+  + SQL_FUZZY_SEARCH_FILTER
+  + SQL_PAGINATION
+  let [ products ] = await db.execute(stmt, { searchquery, size, offset })
   products = products.map(nestProductJoins)
   return products
 }

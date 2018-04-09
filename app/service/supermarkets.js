@@ -51,7 +51,7 @@ async function filterNewPlaces(places, retailchains) {
 }
 
 module.exports.fetchNearbySupermarkets = (lat, lng) =>
-  cache.wrap(`fetchNearbySupermarkets-${lat}-${lng}`, async function() {
+  cache.wrap(`fetchNearbySupermarkets2-${lat}-${lng}`, async function() {
     let retailchains = await fetchRetailChains()
 
     let places = (await gmapsService.fetchNearbySupermarkets(lat, lng))
@@ -75,7 +75,12 @@ module.exports.fetchNearbySupermarkets = (lat, lng) =>
         .catch(console.error)
     }
 
-    const supermarkets = places.filter(place => place.retailchainid)
+    const supermarkets = places
+      .filter(place => place.retailchainid)
+      .map(place => Object.assign(place, {
+        retailchainid: undefined,
+        retailchain: retailchains.find(chain => chain.retailchainid === place.retailchainid)
+      }))
 
     return supermarkets
   })

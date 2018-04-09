@@ -30,16 +30,19 @@ router.use(function(req, res, next) {
 
 router.get("/", [
 	check("searchquery").exists().isLength({ min: 3 }),
-	sanitize("offset").toInt(),
+	sanitize("page").toInt(),
 	sanitize("size").toInt()
 ], execute(async function(req) {
-  const { offset, size, searchquery } = req.query
-  const params = {
-    searchquery,
-    offset: offset ? parseInt(offset) : 0,
-    size: size ? parseInt(size) : 10
-  }
-  const products = await productsService.fetchAll(params)
+  let { page, size, searchquery } = req.query
+  size = size || 10
+  page = page || 1
+  const params = { size, page, searchquery }
+
+  let products = await productsService.fetchAll(params)
+
+  products = products.map(product => Object.assign(product, {
+    thumbPicture: storageService.getThumbURL(product.ean)
+  }))
   return { products, params }
 }))
 
@@ -135,8 +138,9 @@ router.get("/:ean", [
   }
 
   product.labels = await labelsService.fetchProductLabels(ean)
-  product.thumbPicture = `https://storage.googleapis.com/vegstorage/thumb-${ean}`
-  product.coverPicture = `https://storage.googleapis.com/vegstorage/cover-${ean}`
+
+  product.thumbPicture = storageService.getThumbURL(ean)
+  product.coverPicture = storageService.getCoverURL(ean)
 
   const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
 

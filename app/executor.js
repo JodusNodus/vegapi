@@ -29,7 +29,7 @@ module.exports.execute = cb => (req, res) => {
   }
   promise
     .then(function (result) {
-      res.send({ status: "okay", result })
+      res.send(result)
     })
     .catch(function (error) {
       errorResponse(error, res)
