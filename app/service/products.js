@@ -6,15 +6,21 @@ const logger = require("app/logger").getLogger("va.service")
 const SQL_SELECT_ALL = `
 SELECT p.ean as ean, p.name,
 b.brandid, b.name as brandname
-
 FROM products p
 JOIN brands b on b.brandid = p.brandid`
 
-const SQL_FUZZY_SEARCH_FILTER = `
-WHERE p.name LIKE CONCAT('%', :searchquery, '%')`
-// OR SOUNDEX(p.name) = SOUNDEX(:searchquery)`
+const SQL_FUZZY_SEARCH_FILTER = `p.name LIKE CONCAT('%', :searchquery, '%')`
+
+const SQL_FILTER_LABELS = labelList => `
+JOIN productlabels pl ON pl.ean = p.ean
+JOIN labels l ON l.labelid = pl.labelid
+WHERE l.name IN (${labelList})
+AND ${SQL_FUZZY_SEARCH_FILTER}
+GROUP BY p.ean`
 
 const SQL_PAGINATION = "\nLIMIT :offset, :size"
+const SQL_ORDERBY_DESC = "\nORDER BY :orderby DESC"
+const SQL_ORDERBY_ASC = "\nORDER BY :orderby ASC"
 
 const SQL_PRODUCT_EXISTS = `SELECT ean FROM products WHERE ean = ?`
 
@@ -42,12 +48,24 @@ const nestProductJoins = ({ brandid, brandname, userid, firstname, lastname, ...
   user: userid ? { userid, firstname, lastname } : undefined,
 })
 
-module.exports.fetchAll = async function ({ searchquery, size, page }) {
+module.exports.fetchAll = async function ({ searchquery, size, page, orderby, labels }) {
   const offset = size * (page - 1)
   let stmt = SQL_SELECT_ALL
-  + SQL_FUZZY_SEARCH_FILTER
-  + SQL_PAGINATION
-  let [ products ] = await db.execute(stmt, { searchquery, size, offset })
+
+  if (labels.length > 0) {
+    const labelListStr = labels.map(l => `"${l}"`).join(",")
+    stmt += SQL_FILTER_LABELS(labelListStr)
+  } else {
+    stmt += "\nWHERE " + SQL_FUZZY_SEARCH_FILTER
+  }
+
+  if (orderby === "creationdate") {
+    stmt += SQL_ORDERBY_DESC
+  }
+
+  stmt += SQL_PAGINATION
+
+  let [ products ] = await db.execute(stmt, { searchquery, size, offset, orderby })
   products = products.map(nestProductJoins)
   return products
 }

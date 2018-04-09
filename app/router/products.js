@@ -30,13 +30,19 @@ router.use(function(req, res, next) {
 
 router.get("/", [
 	check("searchquery").exists().isLength({ min: 3 }),
+	check("orderby").optional().isIn([ "creationdate", "none" ]),
+	check("labels").optional(),
 	sanitize("page").toInt(),
-	sanitize("size").toInt()
+	sanitize("size").toInt(),
 ], execute(async function(req) {
-  let { page, size, searchquery } = req.query
-  size = size || 10
-  page = page || 1
-  const params = { size, page, searchquery }
+  let { page = 1, size = 10, searchquery, orderby = "none", labels } = req.query
+  if (labels) {
+    labels = labels.split(";")
+  } else {
+    labels = []
+  }
+
+  const params = { size, page, searchquery, orderby, labels }
 
   let products = await productsService.fetchAll(params)
 

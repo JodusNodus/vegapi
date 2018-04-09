@@ -13,7 +13,7 @@
   "main": "server.js",
   "scripts": {
     "start": "NODE_ENV=production node server.js --config=settings.prod.json --log=logs",
-    "start:dev": "NODE_ENV=development node server.js --config=settings.dev.json --log=logs",
+    "start:dev": "NODE_ENV=development nodemon server.js -- --config=settings.dev.json --log=logs",
     "jsdoc": "./node_modules/.bin/jsdoc -r -c ./jsdoc-config.json -d ./jsdoc",
     "apidoc": "./node_modules/.bin/apidoc -f \".*\\.js$\" -i ./app -o ./apidoc"
   },
