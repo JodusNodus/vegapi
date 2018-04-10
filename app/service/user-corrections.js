@@ -1,10 +1,8 @@
 const _ = require("lodash")
 const args = require("app/args")
-const db = require("mysql2-promise")()
+const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 
-const SQL_INSERT_CORRECTION = "INSERT INTO usercorrections (userid, ean) VALUES (?, ?)"
-
 module.exports.addCorrection = async function (userid, ean) {
-  await db.execute(SQL_INSERT_CORRECTION, [ userid, ean ])
+  await knex("usercorrections").insert({ userid, ean })
 }

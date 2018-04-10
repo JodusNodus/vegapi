@@ -1,24 +1,3 @@
-/*
- * vegapi - https://github.com/jodusnodus/vegapi.git
- *
- * Copyright (c) 2018 JodusNodus
- */
-
-/**
- * Handle all database manipulations
- *
- * @module va/db
- *
- * @requires lodash
- * @requires mysql
- * @requires q
- * @requires module:va/args
- * @requires module:va/config-util
- * @requires module:va/logger
- */
-
-"use strict"
-
 const _     = require("lodash")
 const mysql = require("mysql2-promise")()
 
@@ -40,39 +19,37 @@ let mPool = null
 module.exports.start = function (settings) {
   if (!mPool) {
     logger.info("create connection pool.")
-    const config = {
-      namedPlaceholders: true,
-      user:     configUtil.getSetting(settings, "db.user", "root"),
+    const connection = {
+      user: configUtil.getSetting(settings, "db.user", "root"),
       password: configUtil.getSetting(settings, "db.password", "test1234"),
       database: configUtil.getSetting(settings, "db.database", ""),
-      connectionLimit: configUtil.getSetting(settings, "db.connectionLimit", 10),
-      queryFormat: function (query, values) {
-        if (!values) {
-          // without a value object
-          return query
-        }
-        return query.replace(/\{(\w+)}/g, function (text, key) {
-          if (values.hasOwnProperty(key)) {
-            return mPool.escape(values[key])
-          }
-          return text
-        })
-      }
     }
-		const instance = configUtil.getSetting(settings, "db.instance")
-		if (instance && process.env.NODE_ENV === 'production') {
-      config.socketPath = `/cloudsql/${instance}`
-		} else {
-			config.host = configUtil.getSetting(settings, "db.host", "localhost")
-			config.port = configUtil.getSetting(settings, "db.port", 3306)
-		}
-    mPool = mysql.configure(config)
-    logger.info("add the shutdown callback for close the connection pool...")
+
+    const instance = configUtil.getSetting(settings, "db.instance")
+    if (instance && process.env.NODE_ENV === 'production') {
+      connection.socketPath = `/cloudsql/${instance}`
+    } else {
+      connection.host = configUtil.getSetting(settings, "db.host", "localhost")
+      connection.port = configUtil.getSetting(settings, "db.port", 3306)
+    }
+
+    const knex = require("knex")({
+      client: "mysql2",
+      connection,
+      acquireConnectionTimeout: 10000,
+      pool: {
+        afterCreate: function (conn, done) {
+          logger.info("Connection pool is started successful...")
+          done()
+        }
+      },
+    });
+    module.exports.knex = knex
+
     require("app/shutdown").addListener(function (name) {
-      if (mPool && _.isFunction(mPool.end)) {
-        mPool.end(function () {})
+      if (knex) {
+        knex.destroy(() => {})
       }
-      mPool = null
       logger.info("pool is shutdown. Reason of \"", name, "\"...")
     })
   }

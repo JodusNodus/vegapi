@@ -2,6 +2,7 @@ const express = require("express")
 
 const routerProducts = require("./products")
 const routerLocation = require("./location")
+const routerSupermarkets = require("./supermarkets")
 const routerBrands = require("./brands")
 const routerLabels = require("./labels")
 
@@ -21,6 +22,7 @@ router.use(function(req, res, next) {
 
 router.use("/products", routerProducts)
 router.use("/location", routerLocation)
+router.use("/supermarkets", routerSupermarkets)
 router.use("/brands", routerBrands)
 router.use("/labels", routerLabels)
 

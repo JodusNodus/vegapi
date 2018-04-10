@@ -29,9 +29,11 @@ router.use(function(req, res, next) {
 })
 
 router.get("/", [
-	check("searchquery").exists().isLength({ min: 3 }),
+	check("searchquery").optional().isLength({ min: 3 }),
 	check("orderby").optional().isIn([ "creationdate", "none" ]),
 	check("labels").optional(),
+  check("size").optional().isInt({ min: 1, max: 40 }),
+  check("page").optional().isInt({ min: 1 }),
 	sanitize("page").toInt(),
 	sanitize("size").toInt(),
 ], execute(async function(req) {
@@ -147,10 +149,9 @@ router.get("/:ean", [
 
   product.thumbPicture = storageService.getThumbURL(ean)
   product.coverPicture = storageService.getCoverURL(ean)
+  product.supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
 
-  const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
-
-  return { product, supermarkets }
+  return { product }
 }))
 
 

@@ -1,44 +1,28 @@
 const _ = require("lodash")
 const args = require("app/args")
 const cache = require("app/cache")
-const db = require("mysql2-promise")()
+const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 const gmapsService = require("app/service/gmaps")
 
-const SQL_SELECT_RETAILCHAINS = `
-SELECT retailchainid, name FROM retailchains
-ORDER BY CHAR_LENGTH(name) DESC`
-
-const SQL_SELECT_BY_PLACEIDS = `
-SELECT placeid, retailchainid FROM supermarkets
-WHERE placeid IN `
-
-const SQL_SELECT_BY_EAN = `
-SELECT s.placeid, s.retailchainid FROM availableproducts ap
-JOIN supermarkets s
-ON s.placeid = ap.supermarketid
-WHERE ap.ean = ?
-`
-
-const SQL_INSERT_SUPERMARKETS = "INSERT INTO supermarkets (placeid, retailchainid) VALUES "
-
 const fetchRetailChains = () => cache.wrap("fetchRetailChains", async function() {
-  const [ retailChains ] = await db.query(SQL_SELECT_RETAILCHAINS)
+  const retailChains = await knex("retailchains")
+    .select("retailchainid", "name")
+    .orderByRaw("CHAR_LENGTH(name) DESC")
   return retailChains
 })
 
 async function fetchByPlaces (places) {
-  const data = places.map(({ placeid }) => `'${placeid}'`)
-  const query = SQL_SELECT_BY_PLACEIDS + "(" + data.join(", ") + ")"
-  const [ supermarkets ] = await db.query(query)
+  const placeids = places.map(place => place.placeid)
+  const supermarkets = await knex("supermarkets")
+    .select("placeid", "retailchainid")
+    .whereIn("placeid", placeids)
   return supermarkets
 }
 
 async function insertSupermarkets (supermarkets) {
-  const data = supermarkets
-    .map(({ placeid, retailchainid }) => `('${placeid}', ${retailchainid})`)
-  const query = SQL_INSERT_SUPERMARKETS + data.join(", ")
-  await db.query(query)
+  const rows = supermarkets.map(({ placeid, retailchainid }) => ({ placeid, retailchainid }))
+  await knex("supermarkets").insert(rows)
 }
 
 async function filterNewPlaces(places, retailchains) {
@@ -51,7 +35,7 @@ async function filterNewPlaces(places, retailchains) {
 }
 
 module.exports.fetchNearbySupermarkets = (lat, lng) =>
-  cache.wrap(`fetchNearbySupermarkets2-${lat}-${lng}`, async function() {
+  cache.wrap(`fetchNearbySupermarkets-${lat}-${lng}`, async function() {
     let retailchains = await fetchRetailChains()
 
     let places = (await gmapsService.fetchNearbySupermarkets(lat, lng))

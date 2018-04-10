@@ -17,7 +17,7 @@ function start(settings) {
   const user = configUtil.getSetting(settings, "memcached.user")
   const password = configUtil.getSetting(settings, "memcached.password")
   const client = memcachedStore({
-    ttl: 60 * 30,
+    ttl: 60 * 15,
     options: {
       user,
       password,
@@ -42,7 +42,7 @@ function start(settings) {
           x.then(resolve).catch(reject)
         }
       })
-      await set(key, JSON.stringify(val), options)
+      await set(key, JSON.stringify(val === undefined ? null : val), options)
       return val
     }
   }

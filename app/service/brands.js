@@ -1,26 +1,24 @@
 const _ = require("lodash")
 const args = require("app/args")
-const db = require("mysql2-promise")()
+const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 
-const SQL_SELECT_ALL = "SELECT brandid, name FROM brands"
-const SQL_INSERT = "INSERT INTO brands (name) VALUES (?)"
-const SQL_SELECT_BRAND = "SELECT brandid, name FROM brands WHERE name = ?"
-
-const SQL_BRAND_SEACH_FILTER = "name LIKE CONCAT('%', ?, '%')"
-
 module.exports.fetchAll = async function () {
-  const [ brands ] = await db.query(SQL_SELECT_ALL)
+  const brands = await knex("brands").select("brandid", "name")
   return brands
 }
 
-module.exports.insertBrand = async function (brandname) {
-  const [ result ] = await db.execute(SQL_INSERT, [ brandname ])
-  return result.insertId
+module.exports.insertBrand = async function (name) {
+  const labelid = await knex("brands")
+    .insert({ name })
+    .returning("labelid")
+  return labelid 
 }
 
 module.exports.fetchWithName = async function (name) {
-  const [ brands ] = await db.execute(SQL_SELECT_BRAND, [ name ])
+  const brands = await knex("brands")
+    .select("brandid", "name")
+    .where({ name })
   return brands[0]
 }
 

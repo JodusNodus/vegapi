@@ -1,6 +1,6 @@
 const _ = require("lodash")
 const args = require("app/args")
-const db = require("mysql2-promise")()
+const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 
 const SQL_SELECT_ALL = "SELECT labelid, name FROM labels"
@@ -16,34 +16,37 @@ const SQL_INSERT = "INSERT INTO labels (name) VALUES (?)"
 const SQL_INSERT_PRODUCT_LABELS = "INSERT INTO productlabels (ean, labelid) VALUES (?, ?)"
 
 module.exports.fetchAll = async function (options) {
-  const [ labels ] = await db.query(SQL_SELECT_ALL)
+  const labels = await knex("labels")
+    .select("labelid", "name")
   return labels
 }
 
 module.exports.fetchProductLabels = async function (ean) {
-  const [ labels ] = await db.execute(SQL_SELECT_PRODUCT, [ ean ])
+  const labels = await knex("productlabels")
+    .select("labels.labelid", "labels.name")
+    .join("labels", "labels.labelid", "productlabels.labelid")
+    .where({ ean })
   return labels
 }
 
 module.exports.fetchLabelsWithName = async function (labelnames) {
-  const labelstr = labelnames
-    .map(name => `'${name}'`)
-    .join(",")
-  const [ labels ] = await db.query(`${SQL_SELECT_ALL} WHERE name IN (${labelstr})`)
+  const labels = await knex("labels")
+    .select("labelid", "name")
+    .whereIn("name", labelnames)
   return labels
 }
 
 module.exports.insertLabels = async function (labels) {
-  const ids = []
-  for (const label of labels) {
-    const [ result ] = await db.execute(SQL_INSERT, [ label ])
-    ids.push(result.insertId)
-  }
+  const rows = labels.map(name => ({ name }))
+  const chunkSize = 30;
+  const ids = await knex.batchInsert("labels", rows, chunkSize)
+    .returning("labelid")
+
   return ids
 }
 
 module.exports.addProductLabels = async function (ean, labelIds) {
-  for (const id of labelIds) {
-    await db.execute(SQL_INSERT_PRODUCT_LABELS, [ ean, id ])
-  }
+  const rows = labelIds.map(labelid => ({ labelid, ean }))
+  const chunkSize = 30;
+  await knex.batchInsert("productlabels", rows, chunkSize)
 }
