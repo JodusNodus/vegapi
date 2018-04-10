@@ -68,3 +68,12 @@ module.exports.fetchNearbySupermarkets = (lat, lng) =>
 
     return supermarkets
   })
+
+module.exports.exists = async (placeid) => {
+  const rows = await knex("supermarkets").select("placeid").where({ placeid })
+  return rows.length > 0
+}
+
+module.exports.addProductToSupermarket = async (ean, supermarketid) => {
+  await knex("availableproducts").insert({ ean, supermarketid })
+}

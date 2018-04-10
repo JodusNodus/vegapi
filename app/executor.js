@@ -32,6 +32,7 @@ module.exports.execute = cb => (req, res) => {
       res.send(result)
     })
     .catch(function (error) {
+      console.error(error)
       errorResponse(error, res)
     })
 }

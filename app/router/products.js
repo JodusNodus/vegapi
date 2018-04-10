@@ -88,15 +88,19 @@ router.post("/", [
   check("name").exists(),
   check("brandname").exists(),
   check("labels").exists(),
+  check("placeid").exists(),
   sanitize("ean").toInt(),
 ], execute(async function(req) {
   const userid = req.user.userid
-  let { name, ean, brandname, labels: labelNames } = req.body
+  let { name, ean, brandname, placeid, labels: labelNames } = req.body
 
   if (await productsService.productExists(ean)) {
     throw httpStatus.BAD_REQUEST
   }
   if (!await storageService.exists(`thumb-${ean}`)) {
+    throw httpStatus.BAD_REQUEST
+  }
+  if (!await supermarketsService.exists(placeid)) {
     throw httpStatus.BAD_REQUEST
   }
 
@@ -130,6 +134,8 @@ router.post("/", [
   await productsService.insertProduct(product)
 
   await labelsService.addProductLabels(ean, labelIds)
+
+  await supermarketsService.addProductToSupermarket(ean, placeid)
 }))
 
 router.get("/:ean", [
@@ -184,8 +190,6 @@ router.delete("/:ean", [
   } catch(err) {
     // User has already given a correction on this product
   }
-
-  // Check amount of corrections and respond accordingly
 }))
 
 module.exports = router

@@ -1,29 +1,3 @@
-/*
- * vegapi - https://github.com/jodusnodus/vegapi.git
- *
- * Copyright (c) 2018 JodusNodus
- */
-
-/**
- * Configures and startup the application server
- *
- * @module va
- *
- * @requires app-module-path
- * @requires fs
- * @requires path
- * @requires va/info
- * @requires va/args
- * @requires va/configure
- * @requires va/shutdown
- */
-
-"use strict"
-
-//
-// add the current directory to the require paths.
-//   -> all internal modules have the save require path "app/services/..." or "app/info"
-//
 require("app-module-path").addPath(__dirname)
 
 const http      = require("http")
@@ -45,9 +19,6 @@ if (args.isHelp()) {
     process.exit(0)
 }
 
-/**
- * @type {ConfigureOptions}
- */
 const configureOptions = {
     configFilename: args.getConfigFilename(),
     name:       info.getAppName(),
@@ -58,57 +29,32 @@ const configureOptions = {
     }
 }
 
-//
-// Try to prepare the startup and returns the settings object.
-//
-configure(configureOptions)
-    .then(function (settings) {
-        var logger = null
-        try {
-        // initialize Logger
-            logger = require("app/logger").start(settings)
-            // print the header
-            _printHeaderAndHero(logger)
-            logger.info("Logger is started...")
-            // initialize cache
-            require("app/cache").start(settings)
-            // initialize DB
-            require("app/db").start(settings)
-            logger.info("Connection pool is started successful...")
+async function main() {
+  const settings = await configure(configureOptions)
+  const logger = require("app/logger").start(settings)
+  try {
+    printHeaderAndHero(logger)
+    logger.info("Logger is started...")
+    require("app/cache").start(settings)
+    require("app/db").start(settings)
 
-            // TODO Add things for starting or initialize with settings
+    require("app/application")
+      .start(settings)
+      .then(function () {
+        // now the express application is listen
+        logger.info("application is running ...")
+      }, function (reason) {
+        logger.warn(reason)
+        process.exit(1)
+      })
+  } catch (e) {
+    console.error(e)
+  }
+}
 
-            // start the application
-            require("app/application")
-                .start(settings)
-                .then(function () {
-                    // now the express application is listen
-                    logger.info("application is running ...")
-                }, function (reason) {
-                    logger.warn(reason)
-                    process.exit(1)
-                })
-        } catch (e) {
-            if (logger) {
-                logger.warn("[va] ", e)
-            } else {
-                logger.warn("[va] ", e)
-            }
-        }
-    },
-    function (reason) {
-        console.warn("[%s] %s", reason.code || "UNKNOWN", reason.message || "Unknown message")
-        console.warn("[%s] object -> %s", reason.code || "UNKNOWN", JSON.stringify(reason))
-    }
-    )
+main()
 
-/**
- * Prints the header and the hero ascii art to the console and logger.
- *
- * @param {logger} [logger]
- * @private
- */
-function _printHeaderAndHero(logger) {
+function printHeaderAndHero(logger) {
     const heroFile = path.join(__dirname, "hero.txt")
     if (fs.existsSync(heroFile)) {
         const hero = fs.readFileSync(heroFile, "utf8").toString()
