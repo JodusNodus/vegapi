@@ -3,9 +3,6 @@ const args = require("app/args")
 const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 
-const SQL_FUZZY_SEARCH_FILTER = `p.name LIKE CONCAT('%', :searchquery, '%')`
-
-
 const nestProductJoins = ({ brandid, brandName, userid, userFirstname, userLastname, ...product }) => ({
   ...product,
   brand: { brandid, name: brandName },
@@ -55,6 +52,9 @@ module.exports.fetchProduct = async function (ean, userid) {
   const ratingStmt = knex("userratings")
     .select(knex.raw("SUM(rating) / COUNT(rating)"))
     .where({ ean })
+  const userRatingStmt = knex("userratings")
+    .select("rating")
+    .where({ ean, userid })
   const rows = await knex({ p: "products" })
     .select(
       "p.ean",
@@ -62,6 +62,7 @@ module.exports.fetchProduct = async function (ean, userid) {
       { creationdate: knex.raw('DATE_FORMAT(p.creationdate, "%d/%m/%Y")') },
       { userHasCorrected: userHasCorrectedStmt },
       { rating: ratingStmt },
+      { userRating: userRatingStmt },
       "u.userid",
       { userFirstname: "u.firstname" },
       { userLastname: "u.lastname" },
@@ -75,6 +76,7 @@ module.exports.fetchProduct = async function (ean, userid) {
   const product = nestProductJoins(rows[0])
   product.userHasCorrected = !!product.userHasCorrected
   product.rating = Math.round(product.rating || 0)
+  product.userRating = product.userRating || 0
   return product
 }
 
