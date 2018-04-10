@@ -9,4 +9,10 @@ const router = express.Router({
   strict: true
 })
 
+router.get("/", execute(async function(req) {
+  const loc = req.session.location
+  const supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
+  return { supermarkets }
+}))
+
 module.exports = router
