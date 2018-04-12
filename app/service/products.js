@@ -9,7 +9,7 @@ const nestProductJoins = ({ brandid, brandName, userid, userFirstname, userLastn
   user: userid ? { userid, firstname: userFirstname, lastname: userLastname } : undefined,
 })
 
-module.exports.paginateAll = async function ({ searchquery, size, page, orderby, labels }) {
+module.exports.paginateAll = async function ({ searchquery, size, page, orderby, labels=[] }) {
   let stmt = knex({ p: "products" })
     .join("brands as b", "b.brandid", "p.brandid")
     .leftJoin("productlabels as pl", "pl.ean", "p.ean")
@@ -25,7 +25,7 @@ module.exports.paginateAll = async function ({ searchquery, size, page, orderby,
 
   const totalStmt = stmt.clone().countDistinct("p.ean as count").first()
 
-  stmt.select("p.ean", "p.name", { brandid: "b.brandid" }, { brandName: "b.name" })
+  stmt.select("p.ean", "p.name", "p.hits", { brandid: "b.brandid" }, { brandName: "b.name" })
   stmt.groupBy("p.ean")
 
   if (orderby === "creationdate") {
@@ -40,6 +40,14 @@ module.exports.paginateAll = async function ({ searchquery, size, page, orderby,
   const products = await stmt
   const { count } = await totalStmt
   return { products, total: count }
+}
+
+module.exports.fetchAllEans = async function(size = 100000, page = 1) {
+  const offset = size * (page - 1)
+  return await knex("products")
+    .pluck("ean")
+    .offset(offset)
+    .limit(size)
 }
 
 module.exports.productExists = async function(ean) {
@@ -85,5 +93,9 @@ module.exports.fetchProduct = async function (ean, userid) {
 }
 
 module.exports.insertProduct = async function ({ ean, name, brandid, creationdate, userid }) {
-  await knex("products").insert({ ean, name, brandid, creationdate, userid })
+  await knex("products").insert({ ean, name, brandid, creationdate, userid, hits: 0 })
+}
+
+module.exports.updateProductHits = async function(ean, hits) {
+  await knex("products").where({ ean }).update({ hits })
 }

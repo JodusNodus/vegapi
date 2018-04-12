@@ -20,6 +20,7 @@ const passport = require("passport")
 const userAuth = require("app/service/user-auth")
 
 const routerAPI = require("app/router/api")
+const routerTasks = require("app/router/tasks")
 const routerImages = require("app/router/images")
 
 const app = express()
@@ -60,6 +61,7 @@ module.exports.start = function (settings) {
   app.use(passport.session())
 
   app.use("/api", routerAPI)
+  app.use("/tasks", routerTasks)
   app.use("/images", routerImages)
 
   app.post("/signup", [
