@@ -31,7 +31,7 @@ router.use(function(req, res, next) {
 
 router.get("/", [
 	check("searchquery").optional().isLength({ min: 3 }),
-	check("orderby").optional().isIn([ "creationdate", "none" ]),
+	check("orderby").optional().isIn([ "creationdate", "rating", "hits", "none" ]),
 	check("labels").optional(),
   check("size").optional().isInt({ min: 1, max: 40 }),
   check("page").optional().isInt({ min: 1 }),

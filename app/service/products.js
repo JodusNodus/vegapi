@@ -30,8 +30,8 @@ module.exports.paginateAll = async function ({ searchquery, size, page, orderby,
   stmt.select("p.ean", "p.name", "p.hits", "p.rating", { brandid: "b.brandid" }, { brandName: "b.name" })
   stmt.groupBy("p.ean")
 
-  if (orderby === "creationdate") {
-    stmt.orderBy(orderby, "desc")
+  if (/creationdate|rating|hits/.test(orderby)) {
+      stmt.orderBy(orderby, "desc")
   }
 
   const offset = size * (page - 1)
