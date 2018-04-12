@@ -3,8 +3,10 @@ const args = require("app/args")
 const { knex } = require("app/db")
 const logger = require("app/logger").getLogger("va.service")
 
-const nestProductJoins = ({ brandid, brandName, userid, userFirstname, userLastname, ...product }) => ({
+const nestProductJoins = ({ brandid, brandName, userid, userFirstname, userLastname, hits, rating, ...product }) => ({
   ...product,
+  hits: hits || 0,
+  rating: rating ? Math.round(rating) : 0,
   brand: { brandid, name: brandName },
   user: userid ? { userid, firstname: userFirstname, lastname: userLastname } : undefined,
 })
@@ -25,7 +27,7 @@ module.exports.paginateAll = async function ({ searchquery, size, page, orderby,
 
   const totalStmt = stmt.clone().countDistinct("p.ean as count").first()
 
-  stmt.select("p.ean", "p.name", "p.hits", { brandid: "b.brandid" }, { brandName: "b.name" })
+  stmt.select("p.ean", "p.name", "p.hits", "p.rating", { brandid: "b.brandid" }, { brandName: "b.name" })
   stmt.groupBy("p.ean")
 
   if (orderby === "creationdate") {
@@ -37,8 +39,9 @@ module.exports.paginateAll = async function ({ searchquery, size, page, orderby,
     .offset(offset)
     .limit(size)
 
-  const products = await stmt
+  let products = await stmt
   const { count } = await totalStmt
+  products = products.map(nestProductJoins)
   return { products, total: count }
 }
 
@@ -55,13 +58,15 @@ module.exports.productExists = async function(ean) {
   return rows.length > 0
 }
 
+const getProductRatingStmt = (ean) => knex("userratings")
+    .select(knex.raw("SUM(rating) / COUNT(rating)"))
+    .where({ ean })
+
 module.exports.fetchProduct = async function (ean, userid) {
   const userHasCorrectedStmt = knex("usercorrections")
     .count()
     .where({ ean, userid })
-  const ratingStmt = knex("userratings")
-    .select(knex.raw("SUM(rating) / COUNT(rating)"))
-    .where({ ean })
+  const ratingStmt = getProductRatingStmt(ean)
   const userRatingStmt = knex("userratings")
     .select("rating")
     .where({ ean, userid })
@@ -87,15 +92,19 @@ module.exports.fetchProduct = async function (ean, userid) {
 
   const product = nestProductJoins(rows[0])
   product.userHasCorrected = !!product.userHasCorrected
-  product.rating = Math.round(product.rating || 0)
   product.userRating = product.userRating || 0
   return product
 }
 
 module.exports.insertProduct = async function ({ ean, name, brandid, creationdate, userid }) {
-  await knex("products").insert({ ean, name, brandid, creationdate, userid, hits: 0 })
+  await knex("products").insert({ ean, name, brandid, creationdate, userid, hits: 0, rating: 0 })
 }
 
 module.exports.updateProductHits = async function(ean, hits) {
   await knex("products").where({ ean }).update({ hits })
+}
+
+module.exports.updateProductRating = async function(ean) {
+  const ratingStmt = getProductRatingStmt(ean)
+  await knex("products").where({ ean }).update({ rating: ratingStmt })
 }

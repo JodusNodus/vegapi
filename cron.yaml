@@ -2,6 +2,6 @@ cron:
 - description: "daily product hit counter job"
   url: /tasks/producthits
   schedule: every 24 hours
-# - description: "daily product rating job"
-#   url: /tasks/productrating
-#   schedule: every 24 hours
+- description: "daily product rating job"
+  url: /tasks/productratings
+  schedule: every 24 hours

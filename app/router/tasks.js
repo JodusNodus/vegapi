@@ -25,4 +25,11 @@ router.get("/producthits", execute(async function(req) {
   }
 }))
 
+router.get("/productratings", execute(async function(req) {
+  const eans = await productsService.fetchAllEans()
+  for (const ean of eans) {
+    await productsService.updateProductRating(ean)
+  }
+}))
+
 module.exports = router
