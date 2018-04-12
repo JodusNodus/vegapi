@@ -13,6 +13,7 @@ const labelsService = require("app/service/labels")
 const brandsService = require("app/service/brands")
 const gvisionService = require("app/service/gvision")
 const storageService = require("app/service/storage")
+const hitcounterService = require("app/service/hitcounter")
 
 const router = express.Router({
   mergeParams: true,
@@ -53,6 +54,31 @@ router.get("/", [
   }))
   return { products, params }
 }))
+
+router.get("/:ean", [
+  check("ean").isInt(),
+  sanitize("ean").toInt(),
+], execute(async function(req) {
+  const loc = req.session.location
+  const userid = req.user.userid
+  const ean = req.params.ean
+
+  const product = await productsService.fetchProduct(ean, userid)
+  if (!product) {
+    throw httpStatus.NOT_FOUND
+  }
+
+  product.hits = await hitcounterService.getProductHits(ean)
+  product.labels = await labelsService.fetchProductLabels(ean)
+  product.thumbPicture = storageService.getThumbURL(ean)
+  product.coverPicture = storageService.getCoverURL(ean)
+  product.supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
+
+  hitcounterService.hitProduct(ean)
+
+  return { product }
+}))
+
 
 router.post("/picture", [
 	pictureService.upload.single("picture")
@@ -137,29 +163,6 @@ router.post("/", [
 
   await supermarketsService.addProductToSupermarket(ean, placeid)
 }))
-
-router.get("/:ean", [
-  check("ean").isInt(),
-  sanitize("ean").toInt(),
-], execute(async function(req) {
-  const loc = req.session.location
-  const userid = req.user.userid
-  const ean = req.params.ean
-
-  const product = await productsService.fetchProduct(ean, userid)
-  if (!product) {
-    throw httpStatus.NOT_FOUND
-  }
-
-  product.labels = await labelsService.fetchProductLabels(ean)
-
-  product.thumbPicture = storageService.getThumbURL(ean)
-  product.coverPicture = storageService.getCoverURL(ean)
-  product.supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
-
-  return { product }
-}))
-
 
 router.post("/:ean/rate", [
   check("ean").isInt(),

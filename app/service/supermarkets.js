@@ -67,7 +67,7 @@ module.exports.fetchNearbySupermarkets = (lat, lng) =>
       }))
 
     return supermarkets
-  })
+  }, { expires: 60 * 60 * 24 /* 1 day */ })
 
 module.exports.exists = async (placeid) => {
   const rows = await knex("supermarkets").select("placeid").where({ placeid })

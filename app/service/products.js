@@ -72,7 +72,9 @@ module.exports.fetchProduct = async function (ean, userid) {
     .join("users as u", "u.userid", "p.userid")
     .join("brands as b", "b.brandid", "p.brandid")
     .where({ ean })
-  
+
+  if (rows.length == 0) return
+
   const product = nestProductJoins(rows[0])
   product.userHasCorrected = !!product.userHasCorrected
   product.rating = Math.round(product.rating || 0)

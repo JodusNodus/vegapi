@@ -4,12 +4,10 @@ const { promisify } = require("util")
 // const memcachedStore = require('cache-manager-memcached-store')
 const memjs = require('memjs')
 
-function memcachedStore({ ttl, options: { hosts, user, password }}) {
+function memcachedStore({ expires, options: { hosts, user, password }}) {
   process.env.MEMCACHIER_USERNAME = user
   process.env.MEMCACHIER_PASSWORD = password
-  return memjs.Client.create(hosts.join(","), {
-    expires: ttl
-  })
+  return memjs.Client.create(hosts.join(","), { expires })
 }
 
 function start(settings) {
@@ -17,7 +15,7 @@ function start(settings) {
   const user = configUtil.getSetting(settings, "memcached.user")
   const password = configUtil.getSetting(settings, "memcached.password")
   const client = memcachedStore({
-    ttl: 60 * 15,
+    expires: 60 * 15,
     options: {
       user,
       password,
@@ -27,7 +25,8 @@ function start(settings) {
 
   const get = promisify(client.get).bind(client)
   const set = promisify(client.set).bind(client)
-
+  const increment = promisify(client.increment).bind(client)
+  const decrement = promisify(client.decrement).bind(client)
 
   async function wrap(key, fn, options = {}) {
     options.expires = options.ttl
@@ -47,7 +46,7 @@ function start(settings) {
     }
   }
 
-  module.exports = { wrap, set, get, client, start }
+  module.exports = { wrap, set, get, client, start, increment, decrement }
 }
 
 module.exports.start = start
