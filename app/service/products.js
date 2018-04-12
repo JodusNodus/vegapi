@@ -9,12 +9,11 @@ const nestProductJoins = ({ brandid, brandName, userid, userFirstname, userLastn
   user: userid ? { userid, firstname: userFirstname, lastname: userLastname } : undefined,
 })
 
-module.exports.fetchAll = async function ({ searchquery, size, page, orderby, labels }) {
+module.exports.paginateAll = async function ({ searchquery, size, page, orderby, labels }) {
   let stmt = knex({ p: "products" })
-    .select("p.ean", "p.name", { brandid: "b.brandid" }, { brandName: "b.name" })
     .join("brands as b", "b.brandid", "p.brandid")
-    .join("productlabels as pl", "pl.ean", "p.ean")
-    .join("labels as l", "l.labelid", "pl.labelid")
+    .leftJoin("productlabels as pl", "pl.ean", "p.ean")
+    .leftJoin("labels as l", "l.labelid", "pl.labelid")
 
   if (labels.length > 0) {
     stmt.whereIn("l.name", labels)
@@ -24,6 +23,9 @@ module.exports.fetchAll = async function ({ searchquery, size, page, orderby, la
     stmt.whereRaw(`p.name LIKE CONCAT('%',?,'%')`, [ searchquery.toLowerCase() ])
   }
 
+  const totalStmt = stmt.clone().countDistinct("p.ean as count").first()
+
+  stmt.select("p.ean", "p.name", { brandid: "b.brandid" }, { brandName: "b.name" })
   stmt.groupBy("p.ean")
 
   if (orderby === "creationdate") {
@@ -35,9 +37,9 @@ module.exports.fetchAll = async function ({ searchquery, size, page, orderby, la
     .offset(offset)
     .limit(size)
 
-  let products = await stmt;
-  products = products.map(nestProductJoins)
-  return products
+  const products = await stmt
+  const { count } = await totalStmt
+  return { products, total: count }
 }
 
 module.exports.productExists = async function(ean) {

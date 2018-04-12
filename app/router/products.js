@@ -45,14 +45,12 @@ router.get("/", [
     labels = []
   }
 
-  const params = { size, page, searchquery, orderby, labels }
+  let { total, products } = await productsService.paginateAll({ size, page, searchquery, orderby, labels })
 
-  let products = await productsService.fetchAll(params)
-
-  products = products.map(product => Object.assign(product, {
-    thumbPicture: storageService.getThumbURL(product.ean)
-  }))
-  return { products, params }
+  // const products = rows.map(product => Object.assign(product, {
+  //   thumbPicture: storageService.getThumbURL(product.ean)
+  // }))
+  return { products, page, size, total }
 }))
 
 router.get("/:ean", [
