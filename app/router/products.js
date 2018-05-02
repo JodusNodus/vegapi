@@ -1,196 +1,241 @@
-const express = require("express")
-const { check, oneOf } = require("express-validator/check")
-const { matchedData, sanitize } = require("express-validator/filter")
+const express = require("express");
+const { check, oneOf } = require("express-validator/check");
+const { matchedData, sanitize } = require("express-validator/filter");
 
-const httpStatus = require("app/http-status")
-const { execute } = require("app/executor")
-const productsService = require("app/service/products")
-const pictureService = require("app/service/product-picture")
-const supermarketsService = require("app/service/supermarkets")
-const userCorrectionsService = require("app/service/user-corrections")
-const userRatingsService = require("app/service/user-ratings")
-const labelsService = require("app/service/labels")
-const brandsService = require("app/service/brands")
-const gvisionService = require("app/service/gvision")
-const storageService = require("app/service/storage")
-const hitcounterService = require("app/service/hitcounter")
+const httpStatus = require("app/http-status");
+const { execute } = require("app/executor");
+const productsService = require("app/service/products");
+const pictureService = require("app/service/product-picture");
+const supermarketsService = require("app/service/supermarkets");
+const userCorrectionsService = require("app/service/user-corrections");
+const userRatingsService = require("app/service/user-ratings");
+const labelsService = require("app/service/labels");
+const brandsService = require("app/service/brands");
+const gvisionService = require("app/service/gvision");
+const storageService = require("app/service/storage");
+const hitcounterService = require("app/service/hitcounter");
 
 const router = express.Router({
   mergeParams: true,
   strict: true
-})
+});
 
 router.use(function(req, res, next) {
   if (req.session.location) {
-    next()
+    next();
   } else {
-    res.status(400)
-    res.send("Location has not been set for the session")
+    res.status(400);
+    res.send("Location has not been set for the session");
   }
-})
+});
 
-router.get("/", [
-	check("searchquery").optional().isLength({ min: 3 }),
-	check("orderby").optional().isIn([ "creationdate", "rating", "hits", "none" ]),
-	check("labels").optional(),
-  check("size").optional().isInt({ min: 1, max: 40 }),
-  check("page").optional().isInt({ min: 1 }),
-	sanitize("page").toInt(),
-	sanitize("size").toInt(),
-], execute(async function(req) {
-  let { page = 1, size = 10, searchquery, orderby = "none", labels } = req.query
-  if (labels) {
-    labels = labels.split(";")
-  } else {
-    labels = []
-  }
+router.get(
+  "/",
+  [
+    check("searchquery")
+      .optional()
+      .isLength({ min: 3 }),
+    check("orderby")
+      .optional()
+      .isIn(["creationdate", "rating", "hits", "none"]),
+    check("labels").optional(),
+    check("size")
+      .optional()
+      .isInt({ min: 1, max: 40 }),
+    check("page")
+      .optional()
+      .isInt({ min: 1 }),
+    sanitize("page").toInt(),
+    sanitize("size").toInt()
+  ],
+  execute(async function(req) {
+    let {
+      page = 1,
+      size = 10,
+      searchquery,
+      orderby = "none",
+      labels
+    } = req.query;
+    if (labels) {
+      labels = labels.split(";");
+    } else {
+      labels = [];
+    }
 
-  let { total, products } = await productsService.paginateAll({ size, page, searchquery, orderby, labels })
+    let { total, products } = await productsService.paginateAll({
+      size,
+      page,
+      searchquery,
+      orderby,
+      labels
+    });
 
-  // const products = rows.map(product => Object.assign(product, {
-  //   thumbPicture: storageService.getThumbURL(product.ean)
-  // }))
-  return { products, page, size, total }
-}))
+    const products = rows.map(product =>
+      Object.assign(product, {
+        thumbPicture: storageService.getThumbURL(product.ean)
+      })
+    );
+    return { products, page, size, total };
+  })
+);
 
-router.get("/:ean", [
-  check("ean").isInt(),
-  sanitize("ean").toInt(),
-], execute(async function(req) {
-  const loc = req.session.location
-  const userid = req.user.userid
-  const ean = req.params.ean
+router.get(
+  "/:ean",
+  [check("ean").isInt(), sanitize("ean").toInt()],
+  execute(async function(req) {
+    const loc = req.session.location;
+    const userid = req.user.userid;
+    const ean = req.params.ean;
 
-  const product = await productsService.fetchProduct(ean, userid)
-  if (!product) {
-    throw httpStatus.NOT_FOUND
-  }
+    const product = await productsService.fetchProduct(ean, userid);
+    if (!product) {
+      throw httpStatus.NOT_FOUND;
+    }
 
-  product.hits = await hitcounterService.getProductHits(ean)
-  product.labels = await labelsService.fetchProductLabels(ean)
-  product.thumbPicture = storageService.getThumbURL(ean)
-  product.coverPicture = storageService.getCoverURL(ean)
-  product.supermarkets = await supermarketsService.fetchNearbySupermarkets(loc.lat, loc.lng)
+    product.hits = await hitcounterService.getProductHits(ean);
+    product.labels = await labelsService.fetchProductLabels(ean);
+    product.thumbPicture = storageService.getThumbURL(ean);
+    product.coverPicture = storageService.getCoverURL(ean);
+    product.supermarkets = await supermarketsService.fetchNearbySupermarkets(
+      loc.lat,
+      loc.lng
+    );
 
-  hitcounterService.hitProduct(ean)
+    hitcounterService.hitProduct(ean);
 
-  return { product }
-}))
+    return { product };
+  })
+);
 
+router.post(
+  "/picture",
+  [pictureService.upload.single("picture")],
+  execute(async function(req) {
+    const userid = req.user.userid;
+    const ean = parseInt(req.body.ean);
+    if (isNaN(ean) || !req.file) {
+      throw httpStatus.BAD_REQUEST;
+    }
+    if (await productsService.productExists(ean)) {
+      throw httpStatus.BAD_REQUEST;
+    }
+    const picture = await pictureService.process(req.file);
+    const coverBuffer = await pictureService.coverBuffer(picture);
+    await storageService.uploadPicture(`cover-${ean}`, coverBuffer);
+    const {
+      safe,
+      labelSuggestions,
+      brandSuggestions
+    } = await gvisionService.getImageSuggestions();
+    if (!safe) {
+      throw new Error(
+        "Adult, violent or racy pictures are not allowed. If this is not the case please try taking another picture."
+      );
+    }
 
-router.post("/picture", [
-	pictureService.upload.single("picture")
-], execute(async function(req) {
-  const userid = req.user.userid
-  const ean = parseInt(req.body.ean)
-  if (isNaN(ean) || !req.file) {
-    throw httpStatus.BAD_REQUEST
-  }
-  if (await productsService.productExists(ean)) {
-    throw httpStatus.BAD_REQUEST
-  }
-  const picture = await pictureService.process(req.file)
-  const coverBuffer = await pictureService.coverBuffer(picture)
-  const { safe, labelSuggestions, brandSuggestions } = await gvisionService.getImageSuggestions(coverBuffer)
-  if (!safe) {
-    throw new Error("Adult, violent or racy pictures are not allowed. If this is not the case please try taking another picture.")
-  }
+    // Do work but send request back
+    (async function() {
+      const thumbBuffer = await pictureService.thumbBuffer(picture);
+      await storageService.uploadPicture(`thumb-${ean}`, thumbBuffer);
+    })();
 
-  // Do work but send request back
-  (async function() {
-    const thumbBuffer = await pictureService.thumbBuffer(picture)
-    storageService.uploadPicture(`thumb-${ean}`, thumbBuffer)
-    storageService.uploadPicture(`cover-${ean}`, coverBuffer)
-  })()
+    return { labelSuggestions, brandSuggestions };
+  })
+);
 
-  return { labelSuggestions, brandSuggestions }
-}))
+router.post(
+  "/",
+  [
+    check("ean").isInt(),
+    check("name").exists(),
+    check("brandname").exists(),
+    check("labels").exists(),
+    check("placeid").exists(),
+    sanitize("ean").toInt()
+  ],
+  execute(async function(req) {
+    const userid = req.user.userid;
+    let { name, ean, brandname, placeid, labels: labelNames } = req.body;
 
+    if (await productsService.productExists(ean)) {
+      throw httpStatus.BAD_REQUEST;
+    }
+    if (!(await storageService.exists(`cover-${ean}`))) {
+      throw httpStatus.BAD_REQUEST;
+    }
+    if (!(await supermarketsService.exists(placeid))) {
+      throw httpStatus.BAD_REQUEST;
+    }
 
-router.post("/", [
-  check("ean").isInt(),
-  check("name").exists(),
-  check("brandname").exists(),
-  check("labels").exists(),
-  check("placeid").exists(),
-  sanitize("ean").toInt(),
-], execute(async function(req) {
-  const userid = req.user.userid
-  let { name, ean, brandname, placeid, labels: labelNames } = req.body
+    const brand = await brandsService.fetchWithName(brandname);
+    let brandid;
+    if (brand) {
+      brandid = brand.brandid;
+    } else {
+      brandid = await brandsService.insertBrand(brandname);
+    }
 
-  if (await productsService.productExists(ean)) {
-    throw httpStatus.BAD_REQUEST
-  }
-  if (!await storageService.exists(`thumb-${ean}`)) {
-    throw httpStatus.BAD_REQUEST
-  }
-  if (!await supermarketsService.exists(placeid)) {
-    throw httpStatus.BAD_REQUEST
-  }
+    const labels = await labelsService.fetchLabelsWithName(labelNames);
 
-  const brand = await brandsService.fetchWithName(brandname)
-  let brandid
-  if (brand) {
-    brandid = brand.brandid
-  } else {
-    brandid = await brandsService.insertBrand(brandname)
-  }
+    let labelIds = labels.map(label => label.labelid);
 
-  const labels = await labelsService.fetchLabelsWithName(labelNames)
+    const newLabelNames = labelNames.filter(
+      str => !labels.find(label => label.name == str)
+    );
+    if (newLabelNames.length > 0) {
+      const newLabelIds = await labelsService.insertLabels(newLabelNames);
+      labelIds = labelIds.concat(newLabelIds);
+    }
 
-  let labelIds = labels
-    .map(label => label.labelid)
+    const product = {
+      ean,
+      name,
+      brandid,
+      creationdate: new Date(),
+      userid
+    };
+    await productsService.insertProduct(product);
 
-  const newLabelNames = labelNames
-    .filter(str => !labels.find(label => label.name == str))
-  if (newLabelNames.length > 0) {
-    const newLabelIds = await labelsService.insertLabels(newLabelNames)
-    labelIds = labelIds.concat(newLabelIds)
-  }
+    await labelsService.addProductLabels(ean, labelIds);
 
-  const product = {
-    ean,
-    name,
-    brandid,
-    creationdate: new Date(),
-    userid
-  }
-  await productsService.insertProduct(product)
+    await supermarketsService.addProductToSupermarket(ean, placeid);
+  })
+);
 
-  await labelsService.addProductLabels(ean, labelIds)
+router.post(
+  "/:ean/rate",
+  [
+    check("ean").isInt(),
+    sanitize("ean").toInt(),
+    check("rating").isInt({ min: 0, max: 5 }),
+    sanitize("rating").toInt()
+  ],
+  execute(async function(req) {
+    const { rating } = req.body;
+    const userid = req.user.userid;
+    const ean = req.params.ean;
 
-  await supermarketsService.addProductToSupermarket(ean, placeid)
-}))
+    try {
+      await userRatingsService.addRating(userid, ean, rating);
+    } catch (err) {
+      // User has already rated this product
+    }
+  })
+);
 
-router.post("/:ean/rate", [
-  check("ean").isInt(),
-  sanitize("ean").toInt(),
-  check("rating").isInt({ min: 0, max: 5 }),
-  sanitize("rating").toInt()
-], execute(async function(req) {
-	const { rating } = req.body
-  const userid = req.user.userid
-  const ean = req.params.ean
+router.delete(
+  "/:ean",
+  [check("ean").isInt(), sanitize("ean").toInt()],
+  execute(async function(req) {
+    const userid = req.user.userid;
+    const ean = req.params.ean;
 
-  try {
-    await userRatingsService.addRating(userid, ean, rating)
-  } catch(err) {
-    // User has already rated this product
-  }
-}))
+    try {
+      await userCorrectionsService.addCorrection(userid, ean);
+    } catch (err) {
+      // User has already given a correction on this product
+    }
+  })
+);
 
-router.delete("/:ean", [
-  check("ean").isInt(),
-  sanitize("ean").toInt()
-], execute(async function(req) {
-  const userid = req.user.userid
-  const ean = req.params.ean
-
-  try {
-    await userCorrectionsService.addCorrection(userid, ean)
-  } catch(err) {
-    // User has already given a correction on this product
-  }
-}))
-
-module.exports = router
+module.exports = router;
