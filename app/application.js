@@ -40,7 +40,17 @@ module.exports.start = function(settings) {
   // set the application title
   app.set("title", info.getAppTitle());
 
-  app.use(cors({ origin: "*", optionsSuccessStatus: 200 }));
+  const whitelist = ["http://localhost:3000", "https://thomasbilliet.com"];
+  const corsOptions = {
+    origin: function(origin, callback) {
+      if (whitelist.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
+  };
+  app.use(cors(corsOptions));
   app.use(middleware.measureTime());
 
   app.use(bodyParser.json());
