@@ -70,7 +70,7 @@ router.get(
       labels
     });
 
-    const products = rows.map(product =>
+    products = products.map(product =>
       Object.assign(product, {
         thumbPicture: storageService.getThumbURL(product.ean)
       })
@@ -126,7 +126,7 @@ router.post(
       safe,
       labelSuggestions,
       brandSuggestions
-    } = await gvisionService.getImageSuggestions();
+    } = await gvisionService.getImageSuggestions(ean);
     if (!safe) {
       throw new Error(
         "Adult, violent or racy pictures are not allowed. If this is not the case please try taking another picture."
