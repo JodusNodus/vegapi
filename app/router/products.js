@@ -96,7 +96,8 @@ router.get(
     product.labels = await labelsService.fetchProductLabels(ean);
     product.thumbPicture = storageService.getThumbURL(ean);
     product.coverPicture = storageService.getCoverURL(ean);
-    product.supermarkets = await supermarketsService.fetchNearbySupermarkets(
+    product.supermarkets = await supermarketsService.fetchByProductNearby(
+      ean,
       loc.lat,
       loc.lng
     );
