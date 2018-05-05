@@ -40,7 +40,10 @@ module.exports.start = function(settings) {
   // set the application title
   app.set("title", info.getAppTitle());
 
-  const whitelist = ["http://localhost:3000", "https://thomasbilliet.com"];
+  const whitelist = [
+    "http://localhost:3000",
+    "https://vegan.thomasbilliet.com"
+  ];
   const corsOptions = {
     credentials: true,
     origin: function(origin, callback) {
