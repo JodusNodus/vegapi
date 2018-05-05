@@ -148,9 +148,9 @@ router.post(
   "/",
   [
     check("ean").isInt(),
-    check("name").exists(),
-    check("brandname").exists(),
-    check("labels").exists(),
+    check("name").optional(),
+    check("brandname").optional(),
+    check("labels").optional(),
     check("placeid").exists(),
     sanitize("ean").toInt()
   ],
@@ -158,14 +158,23 @@ router.post(
     const userid = req.user.userid;
     let { name, ean, brandname, placeid, labels: labelNames } = req.body;
 
-    if (await productsService.productExists(ean)) {
-      throw httpStatus.BAD_REQUEST;
-    }
+    const productExists = await productsService.productExists(ean);
+
     if (!(await storageService.exists(`cover-${ean}`))) {
       throw httpStatus.BAD_REQUEST;
     }
     if (!(await supermarketsService.exists(placeid))) {
       throw httpStatus.BAD_REQUEST;
+    }
+
+    if (productExists) {
+      await supermarketsService.addProductToSupermarket(ean, placeid);
+      return;
+    }
+
+    if (!name || !brandname || !labelNames) {
+      throw httpStatus.BAD_REQUEST;
+      return;
     }
 
     const brand = await brandsService.fetchWithName(brandname);
