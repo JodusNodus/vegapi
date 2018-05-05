@@ -160,7 +160,7 @@ router.post(
 
     const productExists = await productsService.productExists(ean);
 
-    if (!(await storageService.exists(`cover-${ean}`))) {
+    if (!productExists && !(await storageService.exists(`cover-${ean}`))) {
       throw httpStatus.BAD_REQUEST;
     }
     if (!(await supermarketsService.exists(placeid))) {
