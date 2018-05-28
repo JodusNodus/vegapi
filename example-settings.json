@@ -1,0 +1,34 @@
+{
+  "secret": "",
+  "server": {
+    "port": 8080
+  },
+  "memcached": {
+    "user": "",
+    "password": "",
+    "host": ""
+  },
+  "db": {
+    "instance": "",
+    "user": "",
+    "password": "",
+    "database": ""
+  },
+  "logger": {
+    "namespaces": {
+      "root": "info",
+      "va": "debug",
+      "va.db": "debug",
+      "va.middleware": "debug",
+      "va.metric": "info",
+      "va.executor": "info",
+      "va.service": "debug",
+      "va.shutdown": "info"
+    },
+    "separator": ".",
+    "appender": "console"
+  },
+  "gcloud": {
+    "apiKey": ""
+  }
+}
