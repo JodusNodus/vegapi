@@ -17,7 +17,7 @@ jsdoc/
 apidoc/
 
 # Settings
-#settings.*.json
+settings.*.json
 
 logs
 storage
